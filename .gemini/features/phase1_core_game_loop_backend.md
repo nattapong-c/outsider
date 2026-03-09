@@ -16,7 +16,7 @@ Implement the foundational backend logic for room management, game session lifec
     *   Otherwise, add as a new player, including their chosen name.
     *   Validate max players (4-8).
 *   **Room Admin Controls:**
-    *   **Start Game:** Admin initiates the game. The backend randomly picks a word from a predefined list of **Thai noun words** and randomly assigns in-game roles (`host`, `insider`, `common`). Status changes to 'playing'.
+    *   **Start Game:** Admin initiates the game and **must explicitly select** which player will be the `host` (the player who answers questions). The backend randomly picks a word from a predefined list of **Thai noun words** and randomly assigns the remaining in-game roles (`insider`, `common`) to the other players. Status changes to 'playing'.
     *   **Kick Player:** Admin can remove a player from the room.
     *   **Transfer Admin:** Admin can swap their admin status with another player.
     *   **End Round:** Admin can force-end the current game, resetting the room to 'lobby' status and clearing in-game roles so a new round can begin.

@@ -14,7 +14,20 @@ export default function RoomPage() {
     const [hasJoined, setHasJoined] = useState(false);
     const [roomState, setRoomState] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
+    const [selectedHostId, setSelectedHostId] = useState<string | null>(null);
     const wsRef = useRef<WebSocket | null>(null);
+
+    // Cleanup host selection if player leaves or game state changes
+    useEffect(() => {
+        if (roomState?.status !== 'lobby') {
+            setSelectedHostId(null);
+        } else if (selectedHostId && roomState?.players) {
+            const hostStillExists = roomState.players.some((p: any) => p.id === selectedHostId);
+            if (!hostStillExists) {
+                setSelectedHostId(null);
+            }
+        }
+    }, [roomState, selectedHostId]);
 
     const handleJoin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -175,14 +188,24 @@ export default function RoomPage() {
                                     </div>
                                     {!player.isOnline && <span className="text-xs text-red-400 block mt-1">Disconnected</span>}
                                 </div>
-                                {isAdmin && player.deviceId !== deviceId && (
-                                    <button 
-                                        onClick={() => wsRef.current?.send(JSON.stringify({ type: 'kick_player', targetPlayerId: player.id }))}
-                                        className="text-red-500 hover:text-red-400 text-xs px-2 py-1 bg-gray-800 rounded border border-red-900"
-                                    >
-                                        Kick
-                                    </button>
-                                )}
+                                <div className="flex flex-col gap-2">
+                                    {isAdmin && roomState?.status === 'lobby' && (
+                                        <button 
+                                            onClick={() => setSelectedHostId(player.id)}
+                                            className={`text-xs px-3 py-1 rounded border transition-all ${selectedHostId === player.id ? 'bg-yellow-600 border-yellow-400 text-white font-bold shadow-[2px_2px_0px_#ca8a04]' : 'bg-gray-800 border-gray-600 text-gray-400 hover:bg-gray-700'}`}
+                                        >
+                                            {selectedHostId === player.id ? 'Host Selected' : 'Select as Host'}
+                                        </button>
+                                    )}
+                                    {isAdmin && player.deviceId !== deviceId && (
+                                        <button 
+                                            onClick={() => wsRef.current?.send(JSON.stringify({ type: 'kick_player', targetPlayerId: player.id }))}
+                                            className="text-red-500 hover:text-red-400 text-xs px-2 py-1 bg-gray-800 rounded border border-red-900"
+                                        >
+                                            Kick
+                                        </button>
+                                    )}
+                                </div>
                             </li>
                         ))}
                     </ul>
@@ -194,12 +217,12 @@ export default function RoomPage() {
                         <div className="flex-1 flex flex-col items-center justify-center text-center">
                             <h2 className="text-4xl text-gray-400 mb-8 font-bold">Waiting in Lobby</h2>
                             <p className="text-xl text-gray-500 mb-12 max-w-lg">
-                                Ensure everyone has joined. The admin will randomly assign the secret roles and start the game.
+                                {isAdmin ? "Select a player to be the Host, then start the game." : "Ensure everyone has joined. The admin will select the Host and start the game."}
                             </p>
                             {isAdmin ? (
                                 <button 
-                                    onClick={() => wsRef.current?.send(JSON.stringify({ type: 'start_game' }))}
-                                    disabled={roomState?.players?.length < 3} // Mock limit for testing, real game is 4
+                                    onClick={() => wsRef.current?.send(JSON.stringify({ type: 'start_game', hostPlayerId: selectedHostId }))}
+                                    disabled={roomState?.players?.length < 3 || !selectedHostId} // Mock limit for testing, real game is 4
                                     className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-6 px-12 rounded border-b-4 border-blue-800 hover:border-blue-700 active:border-b-0 active:translate-y-1 transition-all text-2xl disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     START GAME

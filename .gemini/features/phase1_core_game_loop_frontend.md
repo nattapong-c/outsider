@@ -23,7 +23,8 @@ Develop the user interface and client-side logic to support room creation, joini
     *   Visually identify the room **admin** (e.g., crown icon).
     *   Visually indicate offline players (e.g., faded opacity for `isOnline === false`).
 *   **Admin Controls (Visible only to admin):**
-    *   "Start Game" button.
+    *   **Select Host:** Admin must select one player from the lobby to be the in-game `host` (the player who answers questions).
+    *   "Start Game" button (enabled after a host is selected).
     *   "Kick" buttons next to other players.
     *   "Transfer Admin" button next to other players.
 
