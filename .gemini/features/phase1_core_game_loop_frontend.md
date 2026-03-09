@@ -31,8 +31,9 @@ Develop the user interface and client-side logic to support room creation, joini
 ### 3. Game Session UI
 *   **Role & Word Display:**
     *   Privately display assigned in-game role (`host`, `insider`, `common`) for each player once the game starts.
-    *   **Secret Word Visibility:** Privately display the secret word for the `host` and `insider`.
-    *   **Insider Word Toggle:** For the `insider` specifically, the secret word should be hidden by default behind a toggle (e.g., an eye icon or "Tap to reveal" text). This prevents adjacent common players from glancing at the insider's screen and seeing the word. The host does not necessarily need this toggle, but it can be implemented universally for consistency.
+    *   **Secret Word Visibility (Anti-Screen Cheating):** The "Secret Word" UI section must be rendered for **all players** regardless of their role. This ensures players cannot deduce who the Insider is simply by glancing at their screen layout.
+        *   **For `host` and `insider`:** The secret word should be hidden by default behind a toggle (e.g., an eye icon or "Tap to reveal" button). When tapped, it briefly reveals the word.
+        *   **For `common` players:** The UI section exists and shows a dummy hidden state (e.g., `••••••••`), but it is purely decorative and cannot be interacted with or revealed.
 *   **Game State Display:**
     *   Visual representation of current game phase.
     *   In-app timer showing remaining time for the quiz.

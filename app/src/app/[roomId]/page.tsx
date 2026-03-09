@@ -338,9 +338,9 @@ export default function RoomPage() {
                                         {currentPlayer?.inGameRole?.toUpperCase()}
                                     </div>
                                 </div>
-                                {(currentPlayer?.inGameRole === 'host' || currentPlayer?.inGameRole === 'insider') && (
-                                    <div className="text-right flex flex-col items-end">
-                                        <h3 className="text-gray-400 text-sm uppercase mb-1">Secret Word</h3>
+                                <div className="text-right flex flex-col items-end">
+                                    <h3 className="text-gray-400 text-sm uppercase mb-1">Secret Word</h3>
+                                    {currentPlayer?.inGameRole === 'host' || currentPlayer?.inGameRole === 'insider' ? (
                                         <button 
                                             onClick={() => setIsWordVisible(!isWordVisible)}
                                             className="text-3xl font-bold tracking-widest bg-gray-800 px-4 py-1 rounded border border-gray-600 hover:bg-gray-700 transition-colors focus:outline-none flex items-center gap-2"
@@ -349,8 +349,16 @@ export default function RoomPage() {
                                             {isWordVisible ? roomState?.secretWord : '••••••••'}
                                             <span className="text-sm text-gray-400 ml-2">{isWordVisible ? '🙈' : '👁️'}</span>
                                         </button>
-                                    </div>
-                                )}
+                                    ) : (
+                                        <div 
+                                            className="text-3xl font-bold tracking-widest bg-gray-800 px-4 py-1 rounded border border-gray-600 flex items-center gap-2 cursor-not-allowed opacity-50"
+                                            title="Only the Host and Insider can reveal the secret word."
+                                        >
+                                            ••••••••
+                                            <span className="text-sm text-gray-400 ml-2">👁️</span>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                             
                             <div className="flex-1 flex items-center justify-center border-4 border-dashed border-gray-700 rounded-lg p-8 flex-col gap-4">
