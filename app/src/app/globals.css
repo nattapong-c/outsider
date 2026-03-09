@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+@theme {
+  --font-mono: "Courier New", Courier, monospace;
+}
+
+/* Custom Pixel Art Styles for Phase 1 */
+.pixel-text {
+  font-family: 'Courier New', Courier, monospace; /* Placeholder for actual pixel font */
+  text-shadow: 4px 4px 0px rgba(0, 0, 0, 0.5);
+}
+
+body {
+  background-color: #111827; /* gray-900 */
+  color: #ffffff;
+}
