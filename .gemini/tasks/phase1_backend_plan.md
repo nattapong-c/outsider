@@ -5,7 +5,7 @@ Implement the core Room and Game lifecycle logic, including real-time communicat
 
 ## 🏗️ Architecture & Naming Strategy
 *   **Roles:** Distinct separation between Room Lifecycle and Game Lifecycle.
-    *   `admin`: Room creator. Manages the room (kick players, start game, end round, transfer admin).
+    *   `admin`: Room creator. Manages the room (kick players, start game, end round). Note: Admin cannot be transferred.
     *   `host`: In-game role (formerly "Master"). Knows the secret word and answers Yes/No questions.
     *   Other In-game Roles: `insider`, `common`.
 *   **Identity:** Rely on a client-generated `deviceId` (UUID) for player identification instead of formal user accounts.

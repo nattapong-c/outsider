@@ -23,15 +23,16 @@ Develop the user interface and client-side logic to support room creation, joini
     *   Visually identify the room **admin** (e.g., crown icon).
     *   Visually indicate offline players (e.g., faded opacity for `isOnline === false`).
 *   **Admin Controls (Visible only to admin):**
+    *   **Timer Configuration:** UI to configure the timer duration (default 3 minutes) for both the Quiz phase and the Discussion phase, along with a toggle for "Auto-transition on time up". This should be adjustable before starting the game and between rounds.
     *   **Select Host:** Admin must select one player from the lobby to be the in-game `host` (the player who answers questions).
     *   "Start Game" button (enabled after a host is selected).
     *   "Kick" buttons next to other players.
-    *   "Transfer Admin" button next to other players.
 
 ### 3. Game Session UI
 *   **Role & Word Display:**
     *   Privately display assigned in-game role (`host`, `insider`, `common`) for each player once the game starts.
-    *   **Privately display the secret word** for the `host` and `insider`.
+    *   **Secret Word Visibility:** Privately display the secret word for the `host` and `insider`.
+    *   **Insider Word Toggle:** For the `insider` specifically, the secret word should be hidden by default behind a toggle (e.g., an eye icon or "Tap to reveal" text). This prevents adjacent common players from glancing at the insider's screen and seeing the word. The host does not necessarily need this toggle, but it can be implemented universally for consistency.
 *   **Game State Display:**
     *   Visual representation of current game phase.
     *   In-app timer showing remaining time for the quiz.

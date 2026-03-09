@@ -9,16 +9,17 @@ Implement the foundational backend logic for room management, game session lifec
 *   **Create Room:**
     *   A player creates a new room and becomes the room **admin**.
     *   Generate a unique room ID.
-    *   Store initial room state in MongoDB (status: 'lobby', empty player list).
+    *   Store initial room state in MongoDB (status: 'lobby', empty player list, `timerConfig`: { quiz: 180, discussion: 180, autoTransition: true } representing 3 minutes default).
 *   **Join/Reconnect Room:**
     *   Players join a room using the room ID and a client-generated `deviceId`.
     *   If `deviceId` matches an existing player, reconnect them (mark `isOnline: true`).
     *   Otherwise, add as a new player, including their chosen name.
     *   Validate max players (4-8).
 *   **Room Admin Controls:**
+    *   **Update Timer Config:** Admin can update the timer duration for both the Quiz and Discussion phases while in the lobby.
     *   **Start Game:** Admin initiates the game and **must explicitly select** which player will be the `host` (the player who answers questions). The backend randomly picks a word from a predefined list of **Thai noun words** and randomly assigns the remaining in-game roles (`insider`, `common`) to the other players. Status changes to 'playing'.
     *   **Kick Player:** Admin can remove a player from the room.
-    *   **Transfer Admin:** Admin can swap their admin status with another player.
+    *   **Admin Role:** The admin role cannot be manually transferred to another player. It is automatically reassigned only if the current admin leaves the room.
     *   **End Round:** Admin can force-end the current game, resetting the room to 'lobby' status and clearing in-game roles so a new round can begin.
 *   **Leave Room & Disconnections:**
     *   **Explicit Leave:** Player explicitly leaves or closes browser (`beforeunload` REST call). Remove player from room entirely.
@@ -26,9 +27,9 @@ Implement the foundational backend logic for room management, game session lifec
 
 ### 2. Quiz Phase Logic
 *   **Timer Management:**
-    *   Start a 5-minute timer when the game starts (quiz phase begins).
+    *   Start a timer based on the room's `timerConfig` for the quiz phase (default 3 minutes) when the game starts.
     *   Broadcast remaining time to all players.
-    *   Handle timer expiration (Game ends, Insider wins if word not guessed).
+    *   Handle timer expiration: Depending on `timerConfig.autoTransition`, either automatically transition to the discussion phase or wait for the host to manually transition.
 *   **Question/Answer Handling:**
     *   Receive player questions via WebSocket.
     *   Validate questions (e.g., not too long, appropriate format).

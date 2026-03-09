@@ -5,6 +5,31 @@ import { useEffect, useState, useRef } from 'react';
 import { useDeviceId } from '@/hooks/useDeviceId';
 import { api } from '@/lib/api';
 
+// Timer calculation hook
+const useCountdown = (endTime: number | null) => {
+    const [timeLeft, setTimeLeft] = useState<number | null>(null);
+
+    useEffect(() => {
+        if (!endTime) {
+            setTimeLeft(null);
+            return;
+        }
+
+        const interval = setInterval(() => {
+            const remaining = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
+            setTimeLeft(remaining);
+            if (remaining <= 0) clearInterval(interval);
+        }, 1000);
+
+        // Initial calculate immediately
+        setTimeLeft(Math.max(0, Math.floor((endTime - Date.now()) / 1000)));
+
+        return () => clearInterval(interval);
+    }, [endTime]);
+
+    return timeLeft;
+};
+
 export default function RoomPage() {
     const { roomId } = useParams() as { roomId: string };
     const deviceId = useDeviceId();
@@ -15,7 +40,25 @@ export default function RoomPage() {
     const [roomState, setRoomState] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
     const [selectedHostId, setSelectedHostId] = useState<string | null>(null);
+    const [localTimerConfig, setLocalTimerConfig] = useState({ quiz: 180, discussion: 180, autoTransition: true });
+    const [isWordVisible, setIsWordVisible] = useState(false);
     const wsRef = useRef<WebSocket | null>(null);
+    const remainingTime = useCountdown(roomState?.phaseEndTime);
+
+    // Auto-hide the secret word after a few seconds to prevent accidental exposure
+    useEffect(() => {
+        if (isWordVisible) {
+            const timeout = setTimeout(() => setIsWordVisible(false), 3000);
+            return () => clearTimeout(timeout);
+        }
+    }, [isWordVisible]);
+
+    // Sync local timer config with room state when it changes (only if we aren't actively editing)
+    useEffect(() => {
+        if (roomState?.timerConfig) {
+            setLocalTimerConfig(roomState.timerConfig);
+        }
+    }, [roomState?.timerConfig]);
 
     // Cleanup host selection if player leaves or game state changes
     useEffect(() => {
@@ -159,11 +202,23 @@ export default function RoomPage() {
     const currentPlayer = roomState?.players?.find((p: any) => p.deviceId === deviceId);
     const isAdmin = currentPlayer?.isAdmin;
 
+    const formatTime = (seconds: number | null) => {
+        if (seconds === null) return '--:--';
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    };
+
     return (
         <div className="min-h-screen bg-gray-900 text-white font-mono p-4 md:p-8">
             <header className="flex flex-col md:flex-row justify-between items-center mb-8 border-b-4 border-gray-800 pb-4 gap-4">
                 <h1 className="text-3xl font-bold tracking-widest text-blue-400">OUTSIDER</h1>
                 <div className="flex items-center gap-4">
+                    {roomState?.phaseEndTime && (
+                        <div className={`px-4 py-2 rounded border-2 font-bold text-xl ${remainingTime === 0 ? 'bg-red-900 border-red-500 text-white animate-pulse' : 'bg-gray-800 border-gray-600 text-green-400'}`}>
+                            ⏱ {formatTime(remainingTime)}
+                        </div>
+                    )}
                     <div className="bg-gray-800 px-4 py-2 rounded border-2 border-gray-700">
                         Room: <span className="font-bold text-yellow-400">{roomId}</span>
                     </div>
@@ -217,8 +272,51 @@ export default function RoomPage() {
                         <div className="flex-1 flex flex-col items-center justify-center text-center">
                             <h2 className="text-4xl text-gray-400 mb-8 font-bold">Waiting in Lobby</h2>
                             <p className="text-xl text-gray-500 mb-12 max-w-lg">
-                                {isAdmin ? "Select a player to be the Host, then start the game." : "Ensure everyone has joined. The admin will select the Host and start the game."}
+                                {isAdmin ? "Select a player to be the Host, configure timers, then start the game." : "Ensure everyone has joined. The admin will select the Host and start the game."}
                             </p>
+                            
+                            {isAdmin && (
+                                <div className="mb-12 bg-gray-900 p-6 rounded-lg border-2 border-gray-700 w-full max-w-md text-left">
+                                    <h3 className="text-xl text-blue-400 mb-4 font-bold border-b-2 border-gray-800 pb-2">Timer Configuration</h3>
+                                    
+                                    <div className="flex flex-col gap-4">
+                                        <div className="flex justify-between items-center">
+                                            <label className="text-gray-300">Quiz Phase (seconds)</label>
+                                            <input 
+                                                type="number" 
+                                                value={localTimerConfig.quiz} 
+                                                onChange={(e) => setLocalTimerConfig(prev => ({ ...prev, quiz: parseInt(e.target.value) || 0 }))}
+                                                onBlur={() => wsRef.current?.send(JSON.stringify({ type: 'update_timer_config', config: localTimerConfig }))}
+                                                className="w-24 p-2 bg-gray-800 border border-gray-600 rounded text-right text-white"
+                                            />
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <label className="text-gray-300">Discussion Phase (seconds)</label>
+                                            <input 
+                                                type="number" 
+                                                value={localTimerConfig.discussion} 
+                                                onChange={(e) => setLocalTimerConfig(prev => ({ ...prev, discussion: parseInt(e.target.value) || 0 }))}
+                                                onBlur={() => wsRef.current?.send(JSON.stringify({ type: 'update_timer_config', config: localTimerConfig }))}
+                                                className="w-24 p-2 bg-gray-800 border border-gray-600 rounded text-right text-white"
+                                            />
+                                        </div>
+                                        <div className="flex justify-between items-center pt-2">
+                                            <label className="text-gray-300">Auto-transition to Showdown</label>
+                                            <input 
+                                                type="checkbox" 
+                                                checked={localTimerConfig.autoTransition} 
+                                                onChange={(e) => {
+                                                    const newConfig = { ...localTimerConfig, autoTransition: e.target.checked };
+                                                    setLocalTimerConfig(newConfig);
+                                                    wsRef.current?.send(JSON.stringify({ type: 'update_timer_config', config: newConfig }));
+                                                }}
+                                                className="w-6 h-6 bg-gray-800 border-gray-600 rounded"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             {isAdmin ? (
                                 <button 
                                     onClick={() => wsRef.current?.send(JSON.stringify({ type: 'start_game', hostPlayerId: selectedHostId }))}
@@ -241,19 +339,44 @@ export default function RoomPage() {
                                     </div>
                                 </div>
                                 {(currentPlayer?.inGameRole === 'host' || currentPlayer?.inGameRole === 'insider') && (
-                                    <div className="text-right">
+                                    <div className="text-right flex flex-col items-end">
                                         <h3 className="text-gray-400 text-sm uppercase mb-1">Secret Word</h3>
-                                        <div className="text-3xl font-bold tracking-widest bg-gray-800 px-4 py-1 rounded border border-gray-600">
-                                            {roomState?.secretWord}
-                                        </div>
+                                        <button 
+                                            onClick={() => setIsWordVisible(!isWordVisible)}
+                                            className="text-3xl font-bold tracking-widest bg-gray-800 px-4 py-1 rounded border border-gray-600 hover:bg-gray-700 transition-colors focus:outline-none flex items-center gap-2"
+                                            title="Click to toggle visibility"
+                                        >
+                                            {isWordVisible ? roomState?.secretWord : '••••••••'}
+                                            <span className="text-sm text-gray-400 ml-2">{isWordVisible ? '🙈' : '👁️'}</span>
+                                        </button>
                                     </div>
                                 )}
                             </div>
                             
-                            <div className="flex-1 flex items-center justify-center border-4 border-dashed border-gray-700 rounded-lg p-8">
-                                <p className="text-gray-500 text-xl text-center">
+                            <div className="flex-1 flex items-center justify-center border-4 border-dashed border-gray-700 rounded-lg p-8 flex-col gap-4">
+                                <p className="text-gray-500 text-xl text-center mb-4">
                                     [Quiz Phase / Chat UI will be implemented here]
                                 </p>
+
+                                {currentPlayer?.inGameRole === 'host' && roomState?.status === 'playing' && (
+                                    <div className="flex flex-col gap-4 items-center">
+                                        <button 
+                                            onClick={() => wsRef.current?.send(JSON.stringify({ type: 'trigger_showdown' }))}
+                                            className="bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-8 rounded border-b-4 border-green-800 hover:border-green-700 active:border-b-0 active:translate-y-1 transition-all text-lg shadow-[4px_4px_0px_#14532d]"
+                                        >
+                                            ✅ Word Guessed!
+                                        </button>
+
+                                        {!roomState.timerConfig.autoTransition && remainingTime === 0 && (
+                                            <button 
+                                                onClick={() => wsRef.current?.send(JSON.stringify({ type: 'trigger_showdown' }))}
+                                                className="bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-3 px-8 rounded border-b-4 border-yellow-800 hover:border-yellow-700 active:border-b-0 active:translate-y-1 transition-all text-lg"
+                                            >
+                                                ⏳ Time's Up - Proceed to Discussion
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
                             </div>
 
                             {isAdmin && (
