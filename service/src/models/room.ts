@@ -17,34 +17,13 @@ export const TimerConfigSchema = t.Object({
     autoTransition: t.Boolean()
 });
 
-export const VoteSchema = t.Object({
-    voterId: t.String(),
-    targetId: t.String()
-});
-
-export const GameResultSchema = t.Object({
-    winner: t.Union([t.Literal('commons'), t.Literal('insider')]),
-    insiderIdentified: t.Boolean(),
-    wordGuessed: t.Boolean(),
-    voteCounts: t.Record(t.String(), t.Number()),
-    insiderPlayerId: t.Optional(t.String())
-});
-
 export const RoomSchema = t.Object({
     roomId: t.String(),
-    status: t.Union([
-        t.Literal('lobby'),
-        t.Literal('playing'),
-        t.Literal('showdown_discussion'),
-        t.Literal('showdown_voting'),
-        t.Literal('completed')
-    ]),
+    status: t.Union([t.Literal('lobby'), t.Literal('playing'), t.Literal('showdown_discussion')]),
     secretWord: t.String(),
     timerConfig: TimerConfigSchema,
     phaseEndTime: t.Union([t.Number(), t.Null()]),
-    players: t.Array(PlayerSchema),
-    votes: t.Array(VoteSchema),
-    gameResult: t.Union([GameResultSchema, t.Null()])
+    players: t.Array(PlayerSchema)
 });
 
 export type PlayerType = typeof PlayerSchema.static;
@@ -66,33 +45,13 @@ const timerConfigMongooseSchema = new Schema({
     autoTransition: { type: Boolean, required: true, default: true }
 }, { _id: false });
 
-const voteSchema = new Schema({
-    voterId: { type: String, required: true },
-    targetId: { type: String, required: true }
-}, { _id: false });
-
-const gameResultSchema = new Schema({
-    winner: { type: String, enum: ['commons', 'insider'], required: true },
-    insiderIdentified: { type: Boolean, required: true },
-    wordGuessed: { type: Boolean, required: true },
-    voteCounts: { type: Map, of: Number, default: {} },
-    insiderPlayerId: { type: String }
-}, { _id: false });
-
 const roomMongooseSchema = new Schema<RoomType>({
     roomId: { type: String, required: true, unique: true, index: true },
-    status: { 
-        type: String, 
-        enum: ['lobby', 'playing', 'showdown_discussion', 'showdown_voting', 'completed'], 
-        required: true, 
-        default: 'lobby' 
-    },
+    status: { type: String, enum: ['lobby', 'playing', 'showdown_discussion'], required: true, default: 'lobby' },
     secretWord: { type: String, default: '' },
     timerConfig: { type: timerConfigMongooseSchema, default: () => ({ quiz: 180, discussion: 180, autoTransition: true }) },
     phaseEndTime: { type: Number, default: null },
-    players: [playerMongooseSchema],
-    votes: [voteSchema],
-    gameResult: { type: gameResultSchema, default: null }
+    players: [playerMongooseSchema]
 }, { timestamps: true });
 
 export const RoomModel = mongoose.model<RoomType>('Room', roomMongooseSchema);
