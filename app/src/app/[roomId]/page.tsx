@@ -91,21 +91,25 @@ export default function RoomPage() {
         if (!nickname.trim() || !deviceId) return;
 
         try {
-            const { data, error: apiError } = await api.rooms[roomId].join.post({
-                name: nickname,
-                deviceId
-            });
-
-            if (apiError) {
-                setError('Failed to join room');
-                return;
+            const response = await api.rooms.join(roomId, nickname, deviceId);
+            console.log('Join room response:', response);
+            
+            // Axios returns { data, status, headers, ... }
+            // Backend returns { room: {...} }
+            const responseData = response.data || response;
+            const roomData = responseData.room;
+            
+            if (!roomData) {
+                throw new Error('No room data in response');
             }
-
-            setRoomState((data as any).room);
+            
+            setRoomState(roomData);
             setHasJoined(true);
             connectWebSocket();
-        } catch (err) {
-            setError('An error occurred while joining.');
+        } catch (err: any) {
+            console.error('Failed to join room:', err);
+            console.error('Error details:', err.response?.data || err.message);
+            setError(`Failed to join room: ${err.response?.data || err.message}`);
         }
     };
 
@@ -143,10 +147,19 @@ export default function RoomPage() {
 
         const checkExistingSession = async () => {
             try {
-                const { data, error: apiError } = await api.rooms[roomId].get();
-                if (apiError || !data) return;
-
-                const room = (data as any).room;
+                const response = await api.rooms.get(roomId);
+                console.log('Check existing session:', response);
+                
+                // Axios returns { data, status, headers, ... }
+                // Backend returns { room: {...} }
+                const responseData = response.data || response;
+                const room = responseData.room;
+                
+                if (!room) {
+                    console.warn('No room data found');
+                    return;
+                }
+                
                 const isAlreadyInRoom = room.players.some((p: any) => p.deviceId === deviceId);
 
                 if (isAlreadyInRoom) {
@@ -183,10 +196,11 @@ export default function RoomPage() {
     const handleLeaveRoom = async () => {
         if (!deviceId || !roomId) return;
         try {
-            await api.rooms[roomId].leave.post({ deviceId });
+            await api.rooms.leave(roomId, deviceId);
             router.push('/');
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to leave room', error);
+            alert(`Failed to leave room: ${error.response?.data || error.message}`);
         }
     };
 

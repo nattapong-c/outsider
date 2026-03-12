@@ -12,12 +12,24 @@ export default function Home() {
     const handleCreateRoom = async () => {
         setIsLoading(true);
         try {
-            const response = await api.rooms.post({});
-            if (response.data && 'roomId' in response.data) {
-                router.push(`/${response.data.roomId}`);
+            const response = await api.rooms.create();
+            console.log('Create room response:', response);
+            
+            // Axios returns { data, status, headers, ... }
+            // Backend returns { roomId: "..." }
+            const responseData = response.data || response;
+            const roomId = responseData.roomId;
+            
+            if (roomId) {
+                router.push(`/${roomId}`);
+            } else {
+                console.error('No roomId in response:', responseData);
+                alert('Failed to create room: No room ID returned');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to create room:', error);
+            console.error('Error details:', error.response?.data || error.message);
+            alert(`Failed to create room: ${error.response?.data || error.message}`);
         } finally {
             setIsLoading(false);
         }

@@ -296,7 +296,7 @@ export const wsRoutes = new Elysia({ prefix: '/ws/rooms' })
                     };
                     
                     await room.save();
-                    
+
                     // Broadcast full reveal
                     const revealPayload = JSON.stringify({
                         type: 'roles_revealed',
@@ -304,7 +304,14 @@ export const wsRoutes = new Elysia({ prefix: '/ws/rooms' })
                         votes: room.votes,
                         result: room.gameResult
                     });
+                    
+                    // Publish to all players in the room
                     ws.publish(`room:${roomId}`, revealPayload);
+                    
+                    // Also send directly to host to ensure they receive it
+                    ws.send(revealPayload);
+                    
+                    logger.info({ roomId, payloadSize: revealPayload.length }, 'Roles revealed - broadcast to all players');
                 }
             }
             
