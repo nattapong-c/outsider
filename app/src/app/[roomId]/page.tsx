@@ -40,7 +40,7 @@ export default function RoomPage() {
     const [roomState, setRoomState] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
     const [selectedHostId, setSelectedHostId] = useState<string | null>(null);
-    const [localTimerConfig, setLocalTimerConfig] = useState({ quiz: 180, discussion: 180, autoTransition: true });
+    const [localTimerConfig, setLocalTimerConfig] = useState({ quiz: 180, discussion: 180, votingModeAuto: true });
     const [isWordVisible, setIsWordVisible] = useState(false);
     const wsRef = useRef<WebSocket | null>(null);
     const remainingTime = useCountdown(roomState?.phaseEndTime);
@@ -56,7 +56,11 @@ export default function RoomPage() {
     // Sync local timer config with room state when it changes (only if we aren't actively editing)
     useEffect(() => {
         if (roomState?.timerConfig) {
-            setLocalTimerConfig(roomState.timerConfig);
+            setLocalTimerConfig({
+                quiz: roomState.timerConfig.quiz || 180,
+                discussion: roomState.timerConfig.discussion || 180,
+                votingModeAuto: roomState.timerConfig.votingMode === 'auto'
+            });
         }
     }, [roomState?.timerConfig]);
 
@@ -100,13 +104,27 @@ export default function RoomPage() {
         // In production this should dynamically use ws:// or wss:// based on the current window location
         const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001';
         const ws = new WebSocket(`${wsUrl}/ws/rooms/${roomId}?deviceId=${deviceId}`);
-        
+
         ws.onopen = () => console.log('WS Connected');
         ws.onmessage = (event) => {
             try {
                 const message = JSON.parse(event.data);
-                if (message.type === 'room_state_update' || message.type === 'game_started' || message.type === 'round_ended') {
+                console.log('WS Message received:', message.type, message.room ? {
+                    status: message.room.status,
+                    playerCount: message.room.players?.length,
+                    currentPlayer: message.room.players?.find((p: any) => p.deviceId === deviceId)
+                } : null);
+                
+                if (
+                    message.type === 'room_state_update' ||
+                    message.type === 'game_started' ||
+                    message.type === 'round_ended' ||
+                    message.type === 'voting_started' ||
+                    message.type === 'vote_tallied' ||
+                    message.type === 'roles_revealed'
+                ) {
                     setRoomState(message.room);
+                    console.log('Room state updated:', message.room.status, 'Current player role:', message.room.players?.find((p: any) => p.deviceId === deviceId)?.inGameRole);
                 }
             } catch (e) {
                 console.error('Failed to parse WS message', e);
@@ -278,13 +296,13 @@ export default function RoomPage() {
                             {isAdmin && (
                                 <div className="mb-12 bg-gray-900 p-6 rounded-lg border-2 border-gray-700 w-full max-w-md text-left">
                                     <h3 className="text-xl text-blue-400 mb-4 font-bold border-b-2 border-gray-800 pb-2">Timer Configuration</h3>
-                                    
+
                                     <div className="flex flex-col gap-4">
                                         <div className="flex justify-between items-center">
                                             <label className="text-gray-300">Quiz Phase (seconds)</label>
-                                            <input 
-                                                type="number" 
-                                                value={localTimerConfig.quiz} 
+                                            <input
+                                                type="number"
+                                                value={localTimerConfig.quiz}
                                                 onChange={(e) => setLocalTimerConfig(prev => ({ ...prev, quiz: parseInt(e.target.value) || 0 }))}
                                                 onBlur={() => wsRef.current?.send(JSON.stringify({ type: 'update_timer_config', config: localTimerConfig }))}
                                                 className="w-24 p-2 bg-gray-800 border border-gray-600 rounded text-right text-white"
@@ -292,23 +310,29 @@ export default function RoomPage() {
                                         </div>
                                         <div className="flex justify-between items-center">
                                             <label className="text-gray-300">Discussion Phase (seconds)</label>
-                                            <input 
-                                                type="number" 
-                                                value={localTimerConfig.discussion} 
+                                            <input
+                                                type="number"
+                                                value={localTimerConfig.discussion}
                                                 onChange={(e) => setLocalTimerConfig(prev => ({ ...prev, discussion: parseInt(e.target.value) || 0 }))}
                                                 onBlur={() => wsRef.current?.send(JSON.stringify({ type: 'update_timer_config', config: localTimerConfig }))}
                                                 className="w-24 p-2 bg-gray-800 border border-gray-600 rounded text-right text-white"
                                             />
                                         </div>
                                         <div className="flex justify-between items-center pt-2">
-                                            <label className="text-gray-300">Auto-transition to Showdown</label>
-                                            <input 
-                                                type="checkbox" 
-                                                checked={localTimerConfig.autoTransition} 
+                                            <label className="text-gray-300">Auto Voting (Timer)</label>
+                                            <input
+                                                type="checkbox"
+                                                checked={localTimerConfig.votingModeAuto}
                                                 onChange={(e) => {
-                                                    const newConfig = { ...localTimerConfig, autoTransition: e.target.checked };
+                                                    const newConfig = { 
+                                                        ...localTimerConfig, 
+                                                        votingModeAuto: e.target.checked 
+                                                    };
                                                     setLocalTimerConfig(newConfig);
-                                                    wsRef.current?.send(JSON.stringify({ type: 'update_timer_config', config: newConfig }));
+                                                    wsRef.current?.send(JSON.stringify({ 
+                                                        type: 'update_timer_config', 
+                                                        config: newConfig 
+                                                    }));
                                                 }}
                                                 className="w-6 h-6 bg-gray-800 border-gray-600 rounded"
                                             />
@@ -368,15 +392,15 @@ export default function RoomPage() {
 
                                 {currentPlayer?.inGameRole === 'host' && roomState?.status === 'playing' && (
                                     <div className="flex flex-col gap-4 items-center">
-                                        <button 
+                                        <button
                                             onClick={() => wsRef.current?.send(JSON.stringify({ type: 'trigger_showdown' }))}
                                             className="bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-8 rounded border-b-4 border-green-800 hover:border-green-700 active:border-b-0 active:translate-y-1 transition-all text-lg shadow-[4px_4px_0px_#14532d]"
                                         >
                                             ✅ Word Guessed!
                                         </button>
 
-                                        {!roomState.timerConfig.autoTransition && remainingTime === 0 && (
-                                            <button 
+                                        {roomState.timerConfig.votingMode === 'manual' && remainingTime === 0 && (
+                                            <button
                                                 onClick={() => wsRef.current?.send(JSON.stringify({ type: 'trigger_showdown' }))}
                                                 className="bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-3 px-8 rounded border-b-4 border-yellow-800 hover:border-yellow-700 active:border-b-0 active:translate-y-1 transition-all text-lg"
                                             >
@@ -389,11 +413,254 @@ export default function RoomPage() {
 
                             {isAdmin && (
                                 <div className="mt-8 pt-6 border-t-2 border-gray-700 flex justify-end">
-                                    <button 
+                                    <button
                                         onClick={() => wsRef.current?.send(JSON.stringify({ type: 'end_round' }))}
                                         className="bg-red-900 hover:bg-red-800 text-white text-sm font-bold py-3 px-6 rounded border-b-4 border-red-950 active:border-b-0 active:translate-y-1"
                                     >
                                         FORCE END ROUND
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Showdown Discussion Phase */}
+                    {roomState?.status === 'showdown_discussion' && (
+                        <div className="flex-1 flex flex-col">
+                            <div className="bg-purple-900/30 border-4 border-purple-600 p-6 rounded-lg mb-6">
+                                <h2 className="text-2xl font-bold text-purple-400 mb-2">
+                                    🎯 SHOWDOWN PHASE
+                                </h2>
+                                <p className="text-gray-300">
+                                    Discuss and analyze: Who is the Insider? The word has been guessed!
+                                </p>
+                            </div>
+
+                            {currentPlayer?.inGameRole === 'host' && roomState.timerConfig.votingMode === 'manual' && (
+                                <div className="mb-6">
+                                    <button
+                                        onClick={() => wsRef.current?.send(JSON.stringify({ type: 'start_voting' }))}
+                                        className="bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 px-8 rounded border-b-4 border-purple-800 hover:border-purple-700 active:border-b-0 active:translate-y-1 transition-all text-xl w-full"
+                                    >
+                                        🗳️ START VOTING PHASE
+                                    </button>
+                                </div>
+                            )}
+
+                            <div className="flex-1 flex items-center justify-center border-4 border-dashed border-purple-700 rounded-lg p-8">
+                                <p className="text-purple-300 text-xl text-center">
+                                    {roomState.timerConfig.votingMode === 'auto' 
+                                        ? `Voting will start automatically when timer ends`
+                                        : `Waiting for Host to start voting...`
+                                    }
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Showdown Voting Phase */}
+                    {roomState?.status === 'showdown_voting' && (
+                        <div className="flex-1 flex flex-col">
+                            <div className="bg-red-900/30 border-4 border-red-600 p-6 rounded-lg mb-6">
+                                <h2 className="text-2xl font-bold text-red-400 mb-2">
+                                    🗳️ VOTING PHASE
+                                </h2>
+                                <p className="text-gray-300">
+                                    Vote for who you think is the Insider!
+                                </p>
+                            </div>
+
+                            {/* Vote Count Progress */}
+                            <div className="mb-6 bg-gray-900 p-4 rounded border-2 border-gray-700">
+                                <p className="text-gray-400 text-sm mb-2">Votes Submitted</p>
+                                <div className="text-3xl font-bold text-white">
+                                    {roomState.votes?.length || 0} / {roomState.players?.filter((p: any) => p.inGameRole !== 'host').length}
+                                </div>
+                                <div className="w-full bg-gray-700 rounded-full h-4 mt-2">
+                                    <div 
+                                        className="bg-red-600 h-4 rounded-full transition-all"
+                                        style={{ 
+                                            width: `${((roomState.votes?.length || 0) / Math.max(1, roomState.players?.filter((p: any) => p.inGameRole !== 'host').length)) * 100}%` 
+                                        }}
+                                    ></div>
+                                </div>
+                            </div>
+
+                            {/* Voting Cards - Commons & Insider Only */}
+                            {currentPlayer?.inGameRole !== 'host' && (
+                                <div className="mb-6">
+                                    <h3 className="text-lg font-bold text-gray-300 mb-4">Cast Your Vote</h3>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        {roomState.players
+                                            .filter((p: any) => p.deviceId !== deviceId && p.inGameRole !== 'host')
+                                            .map((player: any) => {
+                                                const hasVoted = roomState.votes?.some((v: any) => v.voterId === currentPlayer.id);
+                                                const votedForMe = roomState.votes?.some((v: any) => 
+                                                    v.targetId === player.id && v.voterId === currentPlayer.id
+                                                );
+                                                
+                                                return (
+                                                    <button
+                                                        key={player.id}
+                                                        onClick={() => {
+                                                            if (!hasVoted || votedForMe) {
+                                                                wsRef.current?.send(JSON.stringify({ 
+                                                                    type: 'submit_vote', 
+                                                                    targetId: player.id 
+                                                                }));
+                                                            }
+                                                        }}
+                                                        disabled={hasVoted && !votedForMe}
+                                                        className={`p-4 rounded border-4 transition-all ${
+                                                            votedForMe
+                                                                ? 'bg-red-600 border-red-400 text-white font-bold'
+                                                                : hasVoted
+                                                                ? 'bg-gray-700 border-gray-600 text-gray-500 cursor-not-allowed'
+                                                                : 'bg-gray-800 border-gray-600 hover:bg-red-900/50 hover:border-red-600 text-white'
+                                                        }`}
+                                                    >
+                                                        <div className="text-lg">{player.name}</div>
+                                                        {votedForMe && <div className="text-sm">✓ Selected</div>}
+                                                        {hasVoted && !votedForMe && <div className="text-sm">Vote Submitted</div>}
+                                                    </button>
+                                                );
+                                            })
+                                        }
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Host View */}
+                            {currentPlayer?.inGameRole === 'host' && (
+                                <div className="flex-1 flex items-center justify-center">
+                                    <p className="text-gray-400 text-xl">
+                                        Waiting for all players to vote...
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Reveal Roles Button - Host Only */}
+                            {currentPlayer?.inGameRole === 'host' && (
+                                <div className="mt-6">
+                                    <button
+                                        onClick={() => wsRef.current?.send(JSON.stringify({ type: 'reveal_roles' }))}
+                                        disabled={roomState.votes?.length < roomState.players?.filter((p: any) => p.inGameRole !== 'host').length}
+                                        className="w-full bg-yellow-600 hover:bg-yellow-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-bold py-4 px-8 rounded border-b-4 border-yellow-800 hover:border-yellow-700 active:border-b-0 active:translate-y-1 transition-all text-xl disabled:border-gray-600"
+                                    >
+                                        🔓 REVEAL ROLES & RESULTS
+                                    </button>
+                                    <p className="text-gray-500 text-sm mt-2 text-center">
+                                        All players must vote before revealing
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Game Completed - Results Screen */}
+                    {roomState?.status === 'completed' && roomState.gameResult && (
+                        <div className="flex-1 flex flex-col">
+                            {/* Winner Announcement */}
+                            <div className={`p-8 rounded-lg border-4 mb-6 ${
+                                roomState.gameResult.winner === 'commons'
+                                    ? 'bg-green-900/40 border-green-500'
+                                    : 'bg-red-900/40 border-red-500'
+                            }`}>
+                                <h2 className={`text-4xl font-bold mb-4 text-center ${
+                                    roomState.gameResult.winner === 'commons' ? 'text-green-400' : 'text-red-400'
+                                }`}>
+                                    {roomState.gameResult.winner === 'commons' ? '🎉 COMMONS WIN! 🎉' : '👤 INSIDER WINS! 👤'}
+                                </h2>
+                                <div className="grid grid-cols-2 gap-4 text-center text-xl">
+                                    <div className="bg-gray-900 p-4 rounded">
+                                        <p className="text-gray-400 text-sm">Word Guessed</p>
+                                        <p className={roomState.gameResult.wordGuessed ? 'text-green-400 font-bold' : 'text-red-400 font-bold'}>
+                                            {roomState.gameResult.wordGuessed ? '✅ YES' : '❌ NO'}
+                                        </p>
+                                    </div>
+                                    <div className="bg-gray-900 p-4 rounded">
+                                        <p className="text-gray-400 text-sm">Insider Identified</p>
+                                        <p className={roomState.gameResult.insiderIdentified ? 'text-green-400 font-bold' : 'text-red-400 font-bold'}>
+                                            {roomState.gameResult.insiderIdentified ? '✅ YES' : '❌ NO'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Role Reveals */}
+                            <div className="mb-6">
+                                <h3 className="text-2xl font-bold text-gray-300 mb-4">Player Roles</h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                    {roomState.players.map((player: any) => (
+                                        <div
+                                            key={player.id}
+                                            className={`p-4 rounded border-4 ${
+                                                player.inGameRole === 'host'
+                                                    ? 'bg-yellow-900/30 border-yellow-600'
+                                                    : player.inGameRole === 'insider'
+                                                    ? 'bg-red-900/30 border-red-600'
+                                                    : 'bg-blue-900/30 border-blue-600'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                {player.isAdmin && <span>👑</span>}
+                                                <span className="font-bold text-lg">{player.name}</span>
+                                                {player.deviceId === deviceId && <span className="text-blue-400">(You)</span>}
+                                            </div>
+                                            <div className={`text-xl mt-2 font-bold ${
+                                                player.inGameRole === 'host' ? 'text-yellow-400' :
+                                                player.inGameRole === 'insider' ? 'text-red-400' : 'text-blue-400'
+                                            }`}>
+                                                {player.inGameRole?.toUpperCase()}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Voting Results */}
+                            {roomState.votes && roomState.votes.length > 0 && (
+                                <div className="mb-6">
+                                    <h3 className="text-2xl font-bold text-gray-300 mb-4">Voting Results</h3>
+                                    <div className="bg-gray-900 p-6 rounded border-2 border-gray-700">
+                                        {roomState.players
+                                            .filter((p: any) => p.inGameRole !== 'host')
+                                            .map((voter: any) => {
+                                                const vote = roomState.votes.find((v: any) => v.voterId === voter.id);
+                                                const target = roomState.players.find((p: any) => p.id === vote?.targetId);
+                                                
+                                                return (
+                                                    <div key={voter.id} className="flex items-center justify-between py-3 border-b border-gray-800 last:border-0">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-bold">{voter.name}</span>
+                                                            <span className="text-gray-500">voted for</span>
+                                                            <span className={`font-bold ${
+                                                                target?.inGameRole === 'insider' ? 'text-green-400' : 'text-red-400'
+                                                            }`}>
+                                                                {target?.name || 'Unknown'}
+                                                            </span>
+                                                        </div>
+                                                        {vote && target && (
+                                                            <span className={target.inGameRole === 'insider' ? 'text-green-400' : 'text-red-400'}>
+                                                                {target.inGameRole === 'insider' ? '✅ Correct' : '❌ Wrong'}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })
+                                        }
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Play Again - Admin Only */}
+                            {isAdmin && (
+                                <div className="mt-6">
+                                    <button
+                                        onClick={() => wsRef.current?.send(JSON.stringify({ type: 'end_round' }))}
+                                        className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-8 rounded border-b-4 border-blue-800 hover:border-blue-700 active:border-b-0 active:translate-y-1 transition-all text-xl"
+                                    >
+                                        🔄 PLAY AGAIN (Reset to Lobby)
                                     </button>
                                 </div>
                             )}

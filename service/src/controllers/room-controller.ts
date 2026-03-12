@@ -6,19 +6,19 @@ import { logger } from '../lib/logger';
 export const roomRoutes = new Elysia({ prefix: '/rooms' })
     .post('/', async () => {
         const roomId = crypto.randomUUID().substring(0, 6).toUpperCase();
-        
+
         const newRoom = new RoomModel({
             roomId,
             status: 'lobby',
             secretWord: '',
-            timerConfig: { quiz: 180, discussion: 180, autoTransition: true },
+            timerConfig: { quiz: 180, discussion: 180, votingMode: 'auto' },
             phaseEndTime: null,
             players: []
         });
 
         await newRoom.save();
         logger.info({ roomId }, 'New room created');
-        
+
         return { roomId };
     }, {
         response: t.Object({ roomId: t.String() })

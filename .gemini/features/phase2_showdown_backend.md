@@ -5,39 +5,126 @@ Implement the backend logic for the Showdown phase, including discussion timer m
 
 ## 🚀 Features
 
-### 1. Showdown Phase Logic
-*   **Initiate Showdown:**
-    *   The transition from the guessing (quiz) phase to the discussion phase happens in one of three ways:
-        1.  **Guessed Correctly:** Triggered manually by the `host` when a player correctly guesses the secret word.
-        2.  **Auto Time's Up:** If `autoTransition` is enabled, the backend automatically triggers the transition when the quiz timer expires.
-        3.  **Manual Time's Up:** If `autoTransition` is disabled, the quiz timer expires but the game waits for the `host` to manually trigger the transition.
-    *   The backend handles a specific `trigger_showdown` WebSocket event from the `host` for the manual triggers.
-    *   Transition game state to 'showdown_discussion'.
-*   **Discussion Timer Management:**
-    *   Start a new timer based on the room's `timerConfig` (default 3 minutes) for discussion.
-    *   Broadcast remaining discussion time.
-*   **Voting Mechanism:**
-    *   **General Vote:** Initiate a general vote where all players can vote for *any* suspected player, **except the `host`**. The `host` is exempt from being voted as the Insider.
-    *   Collect votes from all players.
-    *   Tally votes to identify the most suspected player.
-    *   Determine if the identified player is the actual Insider.
-    *   Ensure voting is fair (one vote per player per round).
+### 1. Voting Mode Configuration
+*   **Configurable Voting Mode** (set during room creation/lobby phase):
+    *   `auto`: Automatically transition to voting phase when discussion timer expires
+    *   `manual`: Host must manually trigger the voting phase via `start_voting` event
+*   **Timer Config Schema Update**:
+    *   Replace `autoTransition` with `votingMode: 'auto' | 'manual'`
+    *   Maintain backward compatibility during migration
 
-### 2. Game End Logic
-*   **Determine Win Condition:**
-    *   **Commons & Host Win:** If word guessed AND Insider correctly identified in the general vote.
-    *   **Insider Win:** If group fails to guess word (Quiz timer expires), OR group guesses word but fails to identify Insider.
-*   **Finalize Game State:**
-    *   Update game status to 'voting_finished' (or similar intermediate state) once all votes are tallied.
-    *   **Manual Reveal:** The `host` must manually trigger a `reveal_roles` WebSocket event to transition the state to 'completed'.
-    *   Record winning role/team.
-    *   Store final game results (e.g., who was the Insider, who voted for whom, vote counts, outcome).
-    *   Broadcast final game results and role reveals to all players only after the host triggers the reveal.
-    *   **Round Reset:** The `admin` retains the sole ability to send the `end_round` event to reset the room back to the `lobby` for a new game.
+### 2. Showdown Phase Logic
+*   **Discussion Phase (`showdown_discussion`)**:
+    *   **Initiate Showdown**: Transition occurs when:
+        1.  **Guessed Correctly**: Host triggers `trigger_showdown` event when word is guessed
+        2.  **Auto Time's Up**: If `votingMode === 'auto'`, backend auto-transitions when discussion timer expires
+        3.  **Manual Time's Up**: If `votingMode === 'manual'`, host must send `start_voting` event
+    *   Set game state to `showdown_discussion`
+    *   Start discussion timer based on `timerConfig.discussion`
+    *   Broadcast `room_state_update` with new phase
+
+*   **Voting Phase (`showdown_voting`)**:
+    *   Transition to `showdown_voting` state
+    *   Initialize empty `votes` array
+    *   Clear `phaseEndTime` (no timer during voting)
+    *   Broadcast `voting_started` event
+
+### 3. Voting Mechanism
+*   **Vote Submission** (`submit_vote` event):
+    *   **Validation Rules**:
+        - ❌ Prevent self-voting: `targetId !== voterId`
+        - ❌ Host cannot vote: `player.inGameRole !== 'host'`
+        - ❌ Cannot vote for host: `target.inGameRole !== 'host'`
+        - ✅ Commons and Insider can vote (1 vote per player)
+    *   **Vote Storage**:
+        - Store as `{ voterId: string, targetId: string }`
+        - Allow vote changes before reveal (update existing vote)
+    *   **Real-time Updates**:
+        - Broadcast `vote_tallied` with vote count and eligible voter count
+        - Do NOT reveal individual votes until game end
+
+### 4. Game End Logic
+*   **Role Reveal** (`reveal_roles` event - Host only):
+    *   **Prerequisites**: Host can only trigger when in `showdown_voting` state
+    *   **Calculate Results**:
+        ```typescript
+        const insider = players.find(p => p.inGameRole === 'insider')
+        const insiderVotes = votes.filter(v => v.targetId === insider.id).length
+        const totalVotes = votes.length
+        const insiderIdentified = insiderVotes > totalVotes / 2
+        const commonsWin = wordGuessed && insiderIdentified
+        ```
+    *   **Win Conditions**:
+        - **Commons & Host Win**: Word guessed AND Insider identified (>50% votes)
+        - **Insider Wins**: Word NOT guessed OR Insider NOT identified (≤50% votes)
+    *   **Update State**:
+        - Set status to `completed`
+        - Store `gameResult`: `{ winner, insiderIdentified, wordGuessed }`
+    *   **Broadcast**: Send `roles_revealed` with full game state, votes, and results
+
+*   **Round Reset** (`end_round` event - Admin only):
+    *   Reset status to `lobby`
+    *   Clear all player roles (`inGameRole = null`)
+    *   Clear `secretWord`, `votes`, `gameResult`, `phaseEndTime`
+    *   Broadcast `room_state_update` for lobby state
 
 ## 🛠 Technical Considerations
-*   **ElysiaJS:** Extend WebSocket handlers to manage showdown events (`start_showdown`, `submit_vote`).
-*   **Mongoose:** Update `Game` schema to include voting data, discussion timer, and final game results.
-*   **Game State Transitions:** Carefully manage transitions between 'quiz', 'showdown_discussion', 'showdown_voting', and 'completed' states.
-*   **Concurrency:** Handle simultaneous votes to ensure accurate tallying.
-*   **Error Handling:** Robust validation for voting (e.g., preventing multiple votes, voting for invalid players).
+
+### Schema Updates (Mongoose + Elysia)
+```typescript
+// Vote schema
+export const VoteSchema = t.Object({
+    voterId: t.String(),
+    targetId: t.String()
+})
+
+// Game result schema
+export const GameResultSchema = t.Object({
+    winner: t.Union([t.Literal('commons'), t.Literal('insider')]),
+    insiderIdentified: t.Boolean(),
+    wordGuessed: t.Boolean()
+})
+
+// Updated Room status enum
+status: t.Union([
+    t.Literal('lobby'),
+    t.Literal('playing'),
+    t.Literal('showdown_discussion'),
+    t.Literal('showdown_voting'),
+    t.Literal('completed')
+])
+```
+
+### WebSocket Events
+| Event | Direction | Payload | Description |
+|-------|-----------|---------|-------------|
+| `start_voting` | Client→Server | `{ type: 'start_voting' }` | Host manually starts voting (manual mode) |
+| `submit_vote` | Client→Server | `{ type: 'submit_vote', targetId: string }` | Player casts vote |
+| `vote_tallied` | Server→Client | `{ type: 'vote_tallied', voteCount, eligibleVoters }` | Vote count update |
+| `voting_started` | Server→Client | `{ type: 'voting_started', room }` | Voting phase begins |
+| `reveal_roles` | Client→Server | `{ type: 'reveal_roles' }` | Host reveals all roles |
+| `roles_revealed` | Server→Client | `{ type: 'roles_revealed', room, votes, result }` | Game over, all revealed |
+
+### Error Handling
+- Return error messages for invalid votes (self-vote, host vote, etc.)
+- Validate state transitions (can't vote in wrong phase)
+- Prevent duplicate votes from same player (allow updates instead)
+- Handle edge cases: player disconnects during voting, host leaves mid-game
+
+### Database Persistence
+- Store votes in `votes` array field
+- Store final results in `gameResult` field
+- Maintain game history for potential Phase 3 features
+
+## ✅ Acceptance Criteria
+- [ ] Voting mode (auto/manual) configurable in lobby
+- [ ] Auto-transition works when `votingMode === 'auto'`
+- [ ] Manual trigger works when `votingMode === 'manual'`
+- [ ] Self-voting prevented
+- [ ] Host cannot vote and cannot be voted
+- [ ] Commons/Insider can vote once
+- [ ] Vote tally updates in real-time
+- [ ] Host can reveal roles after all votes cast
+- [ ] Win conditions calculated correctly
+- [ ] Game results broadcast to all players
+- [ ] Admin can reset to lobby
