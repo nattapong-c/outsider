@@ -4,10 +4,15 @@ import { cors } from "@elysiajs/cors";
 import { connectDB } from "./lib/db";
 import { roomRoutes } from "./controllers/room-controller";
 import { wsRoutes } from "./controllers/ws-controller";
+import { wordRoutes } from "./controllers/word-controller";
+import { seedWordBank } from "./lib/seed-words";
 import { logger } from "./lib/logger";
 
 // Initialize Database connection
 connectDB();
+
+// Seed word bank on startup
+seedWordBank();
 
 const app = new Elysia()
   .use(swagger())
@@ -17,6 +22,7 @@ const app = new Elysia()
       credentials: true,
     }),
   )
+  .use(wordRoutes)
   .use(roomRoutes)
   .use(wsRoutes)
   .get("/", () => "Outsider API is running")

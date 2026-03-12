@@ -1,6 +1,7 @@
 import { Elysia, t } from 'elysia';
 import { RoomModel } from '../models/room';
 import { logger } from '../lib/logger';
+import { getRandomWord } from '../services/word-service';
 
 // Track active timers to prevent orphaned timeouts
 const activeTimers = new Map<string, { quizTimeout?: NodeJS.Timeout; discussionTimeout?: NodeJS.Timeout }>();
@@ -81,9 +82,24 @@ export const wsRoutes = new Elysia({ prefix: '/ws/rooms' })
                         }
                     }
 
-                    room.secretWord = 'Elephant';
+                    // Select word based on difficulty and language from start_game message
+                    const difficulty = parsedMessage.difficulty || room.timerConfig.difficulty || 'medium';
+                    const language = parsedMessage.language || room.timerConfig.language || 'english';
+                    
+                    // Update room config with selected difficulty and language
+                    room.timerConfig.difficulty = difficulty;
+                    room.timerConfig.language = language;
+                    
+                    const secretWord = await getRandomWord(
+                        difficulty as 'easy' | 'medium' | 'hard',
+                        language as 'english' | 'thai'
+                    );
+
+                    room.secretWord = secretWord;
                     room.phaseEndTime = Date.now() + (room.timerConfig.quiz * 1000);
                     await room.save();
+
+                    logger.info({ roomId, difficulty, language, secretWord }, 'Game started with word');
 
                     const updatePayload = JSON.stringify({ type: 'game_started', room: room.toJSON() });
                     ws.publish(`room:${roomId}`, updatePayload);
@@ -156,7 +172,9 @@ export const wsRoutes = new Elysia({ prefix: '/ws/rooms' })
                         room.timerConfig = {
                             quiz: parsedMessage.config.quiz || 180,
                             discussion: parsedMessage.config.discussion || 180,
-                            votingMode: parsedMessage.config.votingModeAuto ? 'auto' : 'manual'
+                            votingMode: parsedMessage.config.votingModeAuto ? 'auto' : 'manual',
+                            difficulty: room.timerConfig.difficulty || 'medium',
+                            language: room.timerConfig.language || 'english'
                         };
                         await room.save();
                         const updatePayload = JSON.stringify({ type: 'room_state_update', room: room.toJSON() });

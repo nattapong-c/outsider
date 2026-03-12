@@ -41,6 +41,8 @@ export default function RoomPage() {
     const [error, setError] = useState<string | null>(null);
     const [selectedHostId, setSelectedHostId] = useState<string | null>(null);
     const [localTimerConfig, setLocalTimerConfig] = useState({ quiz: 180, discussion: 180, votingModeAuto: true });
+    const [selectedDifficulty, setSelectedDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+    const [selectedLanguage, setSelectedLanguage] = useState<'english' | 'thai'>('english');
     const [isWordVisible, setIsWordVisible] = useState(false);
     const wsRef = useRef<WebSocket | null>(null);
     const remainingTime = useCountdown(roomState?.phaseEndTime);
@@ -75,6 +77,14 @@ export default function RoomPage() {
             }
         }
     }, [roomState, selectedHostId]);
+
+    // Reset difficulty and language when game ends
+    useEffect(() => {
+        if (roomState?.status === 'lobby') {
+            setSelectedDifficulty('medium');
+            setSelectedLanguage('english');
+        }
+    }, [roomState?.status]);
 
     const handleJoin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -288,7 +298,107 @@ export default function RoomPage() {
                             
                             {isAdmin && (
                                 <div className="mb-12 bg-gray-900 p-6 rounded-lg border-2 border-gray-700 w-full max-w-md text-left">
-                                    <h3 className="text-xl text-blue-400 mb-4 font-bold border-b-2 border-gray-800 pb-2">Timer Configuration</h3>
+                                    <h3 className="text-xl text-blue-400 mb-4 font-bold border-b-2 border-gray-800 pb-2">Game Settings</h3>
+
+                                    {/* Word Language Selection */}
+                                    <div className="flex flex-col gap-4 mb-4">
+                                        <label className="text-gray-300">Word Language</label>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <button
+                                                type="button"
+                                                onClick={() => setSelectedLanguage('english')}
+                                                className={`py-3 px-4 rounded border-4 transition-all ${
+                                                    selectedLanguage === 'english'
+                                                        ? 'bg-blue-600 border-blue-400 text-white font-bold shadow-[2px_2px_0px_#1e3a8a]'
+                                                        : 'bg-gray-800 border-gray-600 text-gray-400 hover:bg-gray-700'
+                                                }`}
+                                            >
+                                                <div className="text-lg">🇬🇧 English</div>
+                                                <div className="text-xs mt-1">Common nouns</div>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setSelectedLanguage('thai')}
+                                                className={`py-3 px-4 rounded border-4 transition-all ${
+                                                    selectedLanguage === 'thai'
+                                                        ? 'bg-red-600 border-red-400 text-white font-bold shadow-[2px_2px_0px_#7f1d1d]'
+                                                        : 'bg-gray-800 border-gray-600 text-gray-400 hover:bg-gray-700'
+                                                }`}
+                                            >
+                                                <div className="text-lg">🇹🇭 ไทย</div>
+                                                <div className="text-xs mt-1">คำนามภาษาไทย</div>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Word Difficulty Selection */}
+                                    <div className="flex flex-col gap-4 mb-4">
+                                        <label className="text-gray-300">Word Difficulty</label>
+                                        <div className="grid grid-cols-3 gap-3">
+                                            <button
+                                                type="button"
+                                                onClick={() => setSelectedDifficulty('easy')}
+                                                className={`py-3 px-2 rounded border-4 transition-all ${
+                                                    selectedDifficulty === 'easy'
+                                                        ? 'bg-green-600 border-green-400 text-white font-bold shadow-[2px_2px_0px_#14532d]'
+                                                        : 'bg-gray-800 border-gray-600 text-gray-400 hover:bg-gray-700'
+                                                }`}
+                                            >
+                                                <div className="text-sm">🟢 Easy</div>
+                                                <div className="text-xs mt-1">Common</div>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setSelectedDifficulty('medium')}
+                                                className={`py-3 px-2 rounded border-4 transition-all ${
+                                                    selectedDifficulty === 'medium'
+                                                        ? 'bg-yellow-600 border-yellow-400 text-white font-bold shadow-[2px_2px_0px_#78350f]'
+                                                        : 'bg-gray-800 border-gray-600 text-gray-400 hover:bg-gray-700'
+                                                }`}
+                                            >
+                                                <div className="text-sm">🟡 Medium</div>
+                                                <div className="text-xs mt-1">Specific</div>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setSelectedDifficulty('hard')}
+                                                className={`py-3 px-2 rounded border-4 transition-all ${
+                                                    selectedDifficulty === 'hard'
+                                                        ? 'bg-red-600 border-red-400 text-white font-bold shadow-[2px_2px_0px_#7f1d1d]'
+                                                        : 'bg-gray-800 border-gray-600 text-gray-400 hover:bg-gray-700'
+                                                }`}
+                                            >
+                                                <div className="text-sm">🔴 Hard</div>
+                                                <div className="text-xs mt-1">Complex</div>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Current Settings Display */}
+                                    <div className="mt-4 p-3 bg-gray-800 rounded border-2 border-gray-600">
+                                        <p className="text-gray-400 text-sm mb-2">Current Settings:</p>
+                                        <div className="flex items-center gap-2">
+                                            <span className={`px-3 py-1 rounded font-bold text-sm ${
+                                                selectedLanguage === 'english'
+                                                    ? 'bg-blue-900 text-blue-400'
+                                                    : 'bg-red-900 text-red-400'
+                                            }`}>
+                                                {selectedLanguage === 'english' ? '🇬🇧 EN' : '🇹🇭 TH'}
+                                            </span>
+                                            <span className={`px-3 py-1 rounded font-bold text-sm ${
+                                                selectedDifficulty === 'easy'
+                                                    ? 'bg-green-900 text-green-400'
+                                                    : selectedDifficulty === 'medium'
+                                                    ? 'bg-yellow-900 text-yellow-400'
+                                                    : 'bg-red-900 text-red-400'
+                                            }`}>
+                                                {selectedDifficulty === 'easy' ? 'Easy' : selectedDifficulty === 'medium' ? 'Medium' : 'Hard'}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Timer Configuration */}
+                                    <h3 className="text-xl text-blue-400 mb-4 font-bold border-b-2 border-gray-800 pb-2 mt-6">Timer Configuration</h3>
 
                                     <div className="flex flex-col gap-4">
                                         <div className="flex justify-between items-center">
@@ -335,9 +445,14 @@ export default function RoomPage() {
                             )}
 
                             {isAdmin ? (
-                                <button 
-                                    onClick={() => wsRef.current?.send(JSON.stringify({ type: 'start_game', hostPlayerId: selectedHostId }))}
-                                    disabled={roomState?.players?.length < 3 || !selectedHostId} // Mock limit for testing, real game is 4
+                                <button
+                                    onClick={() => wsRef.current?.send(JSON.stringify({ 
+                                        type: 'start_game', 
+                                        hostPlayerId: selectedHostId,
+                                        difficulty: selectedDifficulty,
+                                        language: selectedLanguage
+                                    }))}
+                                    disabled={roomState?.players?.length < 3 || !selectedHostId}
                                     className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-6 px-12 rounded border-b-4 border-blue-800 hover:border-blue-700 active:border-b-0 active:translate-y-1 transition-all text-2xl disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     START GAME
@@ -355,10 +470,10 @@ export default function RoomPage() {
                                         {currentPlayer?.inGameRole?.toUpperCase()}
                                     </div>
                                 </div>
-                                <div className="text-right flex flex-col items-end">
+                                <div className="text-right flex flex-col items-end gap-2">
                                     <h3 className="text-gray-400 text-sm uppercase mb-1">Secret Word</h3>
                                     {currentPlayer?.inGameRole === 'host' || currentPlayer?.inGameRole === 'insider' ? (
-                                        <button 
+                                        <button
                                             onClick={() => setIsWordVisible(!isWordVisible)}
                                             className="text-3xl font-bold tracking-widest bg-gray-800 px-4 py-1 rounded border border-gray-600 hover:bg-gray-700 transition-colors focus:outline-none flex items-center gap-2"
                                             title="Click to toggle visibility"
@@ -367,12 +482,33 @@ export default function RoomPage() {
                                             <span className="text-sm text-gray-400 ml-2">{isWordVisible ? '🙈' : '👁️'}</span>
                                         </button>
                                     ) : (
-                                        <div 
+                                        <div
                                             className="text-3xl font-bold tracking-widest bg-gray-800 px-4 py-1 rounded border border-gray-600 flex items-center gap-2 cursor-not-allowed opacity-50"
                                             title="Only the Host and Insider can reveal the secret word."
                                         >
                                             ••••••••
                                             <span className="text-sm text-gray-400 ml-2">👁️</span>
+                                        </div>
+                                    )}
+                                    {/* Display word language and difficulty */}
+                                    {roomState?.timerConfig?.difficulty && roomState?.timerConfig?.language && (
+                                        <div className="flex items-center gap-2 justify-end">
+                                            <span className={`px-2 py-1 rounded border-2 font-bold text-xs ${
+                                                roomState.timerConfig.language === 'english'
+                                                    ? 'bg-blue-900/40 border-blue-500 text-blue-400'
+                                                    : 'bg-red-900/40 border-red-500 text-red-400'
+                                            }`}>
+                                                {roomState.timerConfig.language === 'english' ? '🇬🇧 EN' : '🇹🇭 TH'}
+                                            </span>
+                                            <span className={`px-2 py-1 rounded border-2 font-bold text-xs ${
+                                                roomState.timerConfig.difficulty === 'easy'
+                                                    ? 'bg-green-900/40 border-green-500 text-green-400'
+                                                    : roomState.timerConfig.difficulty === 'medium'
+                                                    ? 'bg-yellow-900/40 border-yellow-500 text-yellow-400'
+                                                    : 'bg-red-900/40 border-red-500 text-red-400'
+                                            }`}>
+                                                {roomState.timerConfig.difficulty === 'easy' ? 'Easy' : roomState.timerConfig.difficulty === 'medium' ? 'Medium' : 'Hard'}
+                                            </span>
                                         </div>
                                     )}
                                 </div>

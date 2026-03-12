@@ -25,7 +25,9 @@ export const GameResultSchema = t.Object({
 export const TimerConfigSchema = t.Object({
     quiz: t.Number(),
     discussion: t.Number(),
-    votingMode: t.Union([t.Literal('auto'), t.Literal('manual')])
+    votingMode: t.Union([t.Literal('auto'), t.Literal('manual')]),
+    difficulty: t.Union([t.Literal('easy'), t.Literal('medium'), t.Literal('hard')]),
+    language: t.Union([t.Literal('english'), t.Literal('thai')])
 });
 
 export const RoomSchema = t.Object({
@@ -74,7 +76,9 @@ const gameResultMongooseSchema = new Schema<GameResultType>({
 const timerConfigMongooseSchema = new Schema({
     quiz: { type: Number, required: true, default: 180 },
     discussion: { type: Number, required: true, default: 180 },
-    votingMode: { type: String, enum: ['auto', 'manual'], required: true, default: 'auto' }
+    votingMode: { type: String, enum: ['auto', 'manual'], required: true, default: 'auto' },
+    difficulty: { type: String, enum: ['easy', 'medium', 'hard'], required: true, default: 'medium' },
+    language: { type: String, enum: ['english', 'thai'], required: true, default: 'english' }
 }, { _id: false });
 
 const roomMongooseSchema = new Schema<RoomType>({
