@@ -1,7 +1,0 @@
-{
-  "version": 2,
-  "buildCommand": "cd app && bun run build",
-  "outputDirectory": "app/.next",
-  "devCommand": "cd app && bun run dev",
-  "installCommand": "cd app && bun install"
-}
