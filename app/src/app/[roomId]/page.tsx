@@ -109,12 +109,6 @@ export default function RoomPage() {
         ws.onmessage = (event) => {
             try {
                 const message = JSON.parse(event.data);
-                console.log('WS Message received:', message.type, message.room ? {
-                    status: message.room.status,
-                    playerCount: message.room.players?.length,
-                    currentPlayer: message.room.players?.find((p: any) => p.deviceId === deviceId)
-                } : null);
-                
                 if (
                     message.type === 'room_state_update' ||
                     message.type === 'game_started' ||
@@ -124,7 +118,6 @@ export default function RoomPage() {
                     message.type === 'roles_revealed'
                 ) {
                     setRoomState(message.room);
-                    console.log('Room state updated:', message.room.status, 'Current player role:', message.room.players?.find((p: any) => p.deviceId === deviceId)?.inGameRole);
                 }
             } catch (e) {
                 console.error('Failed to parse WS message', e);
@@ -495,18 +488,18 @@ export default function RoomPage() {
                                             .filter((p: any) => p.deviceId !== deviceId && p.inGameRole !== 'host')
                                             .map((player: any) => {
                                                 const hasVoted = roomState.votes?.some((v: any) => v.voterId === currentPlayer.id);
-                                                const votedForMe = roomState.votes?.some((v: any) => 
+                                                const votedForMe = roomState.votes?.some((v: any) =>
                                                     v.targetId === player.id && v.voterId === currentPlayer.id
                                                 );
-                                                
+
                                                 return (
                                                     <button
                                                         key={player.id}
                                                         onClick={() => {
                                                             if (!hasVoted || votedForMe) {
-                                                                wsRef.current?.send(JSON.stringify({ 
-                                                                    type: 'submit_vote', 
-                                                                    targetId: player.id 
+                                                                wsRef.current?.send(JSON.stringify({
+                                                                    type: 'submit_vote',
+                                                                    targetId: player.id
                                                                 }));
                                                             }
                                                         }}

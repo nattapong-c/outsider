@@ -62,15 +62,6 @@ export const wsRoutes = new Elysia({ prefix: '/ws/rooms' })
 
                     logger.info({ roomId, deviceId, hostPlayerId: parsedMessage.hostPlayerId }, 'Admin started the game');
 
-                    // Log admin player's current state
-                    const adminPlayer = room.players.find(p => p.isAdmin);
-                    logger.info({ 
-                        roomId, 
-                        adminDeviceId: adminPlayer?.deviceId, 
-                        adminIsHost: adminPlayer?.id === parsedMessage.hostPlayerId,
-                        hostPlayerRoleBefore: hostPlayer.inGameRole
-                    }, 'Admin player state before role assignment');
-
                     // Clear any existing timers for this room
                     const existingTimers = activeTimers.get(roomId);
                     if (existingTimers) {
@@ -80,14 +71,6 @@ export const wsRoutes = new Elysia({ prefix: '/ws/rooms' })
 
                     room.status = 'playing';
                     hostPlayer.inGameRole = 'host';
-
-                    logger.info({ 
-                        roomId, 
-                        hostPlayerId: hostPlayer.id, 
-                        hostPlayerDeviceId: hostPlayer.deviceId,
-                        hostPlayerRoleAfter: hostPlayer.inGameRole,
-                        hostPlayerIsAdmin: hostPlayer.isAdmin
-                    }, 'Host role assigned');
 
                     const otherPlayers = room.players.filter(p => p.id !== parsedMessage.hostPlayerId);
                     if (otherPlayers.length > 0) {
@@ -102,18 +85,7 @@ export const wsRoutes = new Elysia({ prefix: '/ws/rooms' })
                     room.phaseEndTime = Date.now() + (room.timerConfig.quiz * 1000);
                     await room.save();
 
-                    // Log all players' roles for debugging
-                    const playerRoles = room.players.map(p => ({
-                        id: p.id,
-                        deviceId: p.deviceId,
-                        name: p.name,
-                        isAdmin: p.isAdmin,
-                        inGameRole: p.inGameRole
-                    }));
-                    logger.info({ roomId, players: playerRoles }, 'All player roles after assignment');
-
                     const updatePayload = JSON.stringify({ type: 'game_started', room: room.toJSON() });
-                    logger.info({ roomId, payloadSize: updatePayload.length }, 'Broadcasting game_started event');
                     ws.publish(`room:${roomId}`, updatePayload);
                     ws.send(updatePayload);
 
@@ -121,19 +93,14 @@ export const wsRoutes = new Elysia({ prefix: '/ws/rooms' })
                     activeTimers.set(roomId, {});
 
                     // Auto-transition logic based on votingMode
-                    logger.info({ roomId, votingMode: room.timerConfig.votingMode, quizSeconds: room.timerConfig.quiz }, 'Starting game with timer config');
-
                     if (room.timerConfig.votingMode === 'auto') {
                         // Quiz timer expiry - auto transition to showdown_discussion
-                        logger.info({ roomId, delayMs: room.timerConfig.quiz * 1000 }, 'Scheduling quiz timeout for auto-transition');
                         const quizTimeout = setTimeout(async () => {
-                            logger.info({ roomId }, 'Quiz timeout callback executing');
                             const currentRoom = await RoomModel.findOne({ roomId });
                             if (!currentRoom) {
                                 logger.error({ roomId }, 'Room not found in quiz timeout');
                                 return;
                             }
-                            logger.info({ roomId, status: currentRoom.status, phaseEndTime: currentRoom.phaseEndTime, now: Date.now(), expired: currentRoom.phaseEndTime && Date.now() >= currentRoom.phaseEndTime }, 'Quiz timeout checking conditions');
 
                             if (currentRoom && currentRoom.status === 'playing' && currentRoom.phaseEndTime && Date.now() >= currentRoom.phaseEndTime) {
                                 logger.info({ roomId }, 'Quiz timer expired, auto-transitioning to showdown discussion');
@@ -141,16 +108,13 @@ export const wsRoutes = new Elysia({ prefix: '/ws/rooms' })
                                 currentRoom.phaseEndTime = Date.now() + (currentRoom.timerConfig.discussion * 1000);
                                 await currentRoom.save();
                                 const transitionPayload = JSON.stringify({ type: 'room_state_update', room: currentRoom.toJSON() });
-                                logger.info({ roomId, payloadSize: transitionPayload.length }, 'Publishing room_state_update from quiz timeout');
                                 
                                 // Publish to room channel - this will reach all subscribed clients
                                 ws.publish(`room:${roomId}`, transitionPayload);
-                                logger.info({ roomId }, 'room_state_update published successfully via ws.publish');
                                 
                                 // Also send directly to this WebSocket if still open
                                 if (ws.readyState === 1) { // WebSocket.OPEN
                                     ws.send(transitionPayload);
-                                    logger.info({ roomId }, 'room_state_update sent directly to admin ws');
                                 }
 
                                 // Auto-transition to voting after discussion timer (only if still auto mode)
@@ -165,14 +129,11 @@ export const wsRoutes = new Elysia({ prefix: '/ws/rooms' })
                                             discussionRoom.votes = [];
                                             await discussionRoom.save();
                                             const votingPayload = JSON.stringify({ type: 'voting_started', room: discussionRoom.toJSON() });
-                                            logger.info({ roomId, payloadSize: votingPayload.length }, 'Publishing voting_started from discussion timeout');
                                             ws.publish(`room:${roomId}`, votingPayload);
-                                            logger.info({ roomId }, 'voting_started published successfully via ws.publish');
                                             
                                             // Also send directly to this WebSocket if still open
                                             if (ws.readyState === 1) {
                                                 ws.send(votingPayload);
-                                                logger.info({ roomId }, 'voting_started sent directly to admin ws');
                                             }
                                         }
                                     }, currentRoom.timerConfig.discussion * 1000);
@@ -187,8 +148,6 @@ export const wsRoutes = new Elysia({ prefix: '/ws/rooms' })
                         const timers = activeTimers.get(roomId) || {};
                         timers.quizTimeout = quizTimeout;
                         activeTimers.set(roomId, timers);
-                    } else {
-                        logger.info({ roomId }, 'Voting mode is manual - no auto-transition scheduled');
                     }
 
                 } else if (parsedMessage.type === 'update_timer_config') {
@@ -370,9 +329,9 @@ export const wsRoutes = new Elysia({ prefix: '/ws/rooms' })
                 } else {
                     room.votes.push({ voterId: player.id, targetId });
                 }
-                
+
                 await room.save();
-                
+
                 // Broadcast vote count (not individual votes)
                 const eligibleVoters = room.players.filter(p => p.inGameRole !== 'host').length;
                 const voteCountPayload = JSON.stringify({
@@ -382,6 +341,11 @@ export const wsRoutes = new Elysia({ prefix: '/ws/rooms' })
                     room: room.toJSON()
                 });
                 ws.publish(`room:${roomId}`, voteCountPayload);
+                
+                // Also send directly to the voter's WebSocket to ensure they receive it
+                if (ws.readyState === 1) { // WebSocket.OPEN
+                    ws.send(voteCountPayload);
+                }
             }
         },
         async close(ws) {
