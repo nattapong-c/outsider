@@ -51,9 +51,16 @@ In Vercel project settings:
 In Vercel project settings, add:
 
 ```bash
+# Backend REST API URL
 NEXT_PUBLIC_API_URL=https://your-backend-url.onrender.com
+
+# Backend WebSocket URL (IMPORTANT: Use wss:// for production!)
 NEXT_PUBLIC_WS_URL=wss://your-backend-url.onrender.com
 ```
+
+**Note:** If `NEXT_PUBLIC_WS_URL` is not set, the app will auto-detect:
+- `wss://` when page is loaded over HTTPS
+- `ws://` when page is loaded over HTTP (localhost)
 
 ### Step 4: Deploy
 

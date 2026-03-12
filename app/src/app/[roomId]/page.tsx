@@ -115,8 +115,17 @@ export default function RoomPage() {
 
     const connectWebSocket = () => {
         if (!deviceId) return;
-        // In production this should dynamically use ws:// or wss:// based on the current window location
-        const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001';
+        
+        // Use wss:// for production (HTTPS), ws:// for localhost
+        let wsUrl = process.env.NEXT_PUBLIC_WS_URL;
+        
+        if (!wsUrl) {
+            // Auto-detect protocol based on current page
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const host = window.location.host || 'localhost:3001';
+            wsUrl = `${protocol}//${host}`;
+        }
+        
         const ws = new WebSocket(`${wsUrl}/ws/rooms/${roomId}?deviceId=${deviceId}`);
 
         ws.onopen = () => console.log('WS Connected');
