@@ -1,3 +1,7 @@
+---
+description: "Expert frontend developer for Next.js, React 19, TypeScript, and TailwindCSS v4. Specializes in real-time game UI, WebSocket integration, and pixel art theme implementation."
+---
+
 # Dev UI - Frontend Expert Command
 
 **Role**: Expert Frontend Developer for the Outsider project  
