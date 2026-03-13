@@ -40,7 +40,7 @@ export default function RoomPage() {
     const [roomState, setRoomState] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
     const [selectedHostId, setSelectedHostId] = useState<string | null>(null);
-    const [localTimerConfig, setLocalTimerConfig] = useState({ quiz: 180, discussion: 180, votingModeAuto: true });
+    const [localTimerConfig, setLocalTimerConfig] = useState({ quiz: 180, discussion: 180, votingModeAuto: false }); // Default to manual
     const [selectedDifficulty, setSelectedDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
     const [selectedLanguage, setSelectedLanguage] = useState<'english' | 'thai'>('english');
     const [isWordVisible, setIsWordVisible] = useState(false);
@@ -555,6 +555,7 @@ export default function RoomPage() {
                                                     className="w-24 modern-input p-2 text-right"
                                                 />
                                             </div>
+                                            {/* Auto Voting disabled - default to manual phase transitions
                                             <div className="flex justify-between items-center pt-2">
                                                 <label className="text-gray-400 text-sm tracking-wider">Auto Voting (Timer)</label>
                                                 <input
@@ -574,6 +575,7 @@ export default function RoomPage() {
                                                     className="w-6 h-6 bg-gray-800 border-gray-600 rounded"
                                                 />
                                             </div>
+                                            */}
                                         </div>
                                     </div>
                                 </div>
@@ -717,11 +719,15 @@ export default function RoomPage() {
                                 </div>
                             )}
 
-                            {/* Host Controls - Word Guessed Button (Outside Quiz Phase) */}
+                            {/* Host Controls - Quiz Phase Buttons */}
                             {currentPlayer?.inGameRole === 'host' && roomState?.status === 'playing' && (
                                 <div className="mt-6 flex flex-col gap-4 items-center">
+                                    {/* Always show - Players guessed the word */}
                                     <button
-                                        onClick={() => wsRef.current?.send(JSON.stringify({ type: 'trigger_showdown' }))}
+                                        onClick={() => wsRef.current?.send(JSON.stringify({ 
+                                            type: 'trigger_showdown',
+                                            wordGuessed: true  // Explicitly tell backend word was guessed
+                                        }))}
                                         className="modern-button text-white text-xl tracking-[0.15em] uppercase
                                                  bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400
                                                  w-full md:w-auto md:px-12 py-4"
@@ -732,16 +738,20 @@ export default function RoomPage() {
                                         </span>
                                     </button>
 
-                                    {roomState.timerConfig.votingMode === 'manual' && remainingTime === 0 && (
+                                    {/* Only show when timer expires - No one guessed the word */}
+                                    {remainingTime === 0 && (
                                         <button
-                                            onClick={() => wsRef.current?.send(JSON.stringify({ type: 'trigger_showdown' }))}
+                                            onClick={() => wsRef.current?.send(JSON.stringify({ 
+                                                type: 'trigger_showdown',
+                                                wordGuessed: false  // Explicitly tell backend word was NOT guessed
+                                            }))}
                                             className="modern-button text-white text-lg tracking-[0.1em] uppercase
-                                                     bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400
-                                                     w-full md:w-auto md:px-8 py-3"
+                                                     bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400
+                                                     w-full md:w-auto md:px-12 py-4"
                                         >
                                             <span className="flex items-center justify-center gap-2">
-                                                <span className="text-2xl">⏳</span>
-                                                Time's Up - Proceed to Discussion
+                                                <span className="text-2xl">⏰</span>
+                                                Time's Up - End Quiz
                                             </span>
                                         </button>
                                     )}

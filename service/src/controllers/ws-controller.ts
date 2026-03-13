@@ -122,6 +122,8 @@ export const wsRoutes = new Elysia({ prefix: '/ws/rooms' })
                                 logger.info({ roomId }, 'Quiz timer expired, auto-transitioning to showdown discussion');
                                 currentRoom.status = 'showdown_discussion';
                                 currentRoom.phaseEndTime = Date.now() + (currentRoom.timerConfig.discussion * 1000);
+                                // Timer expired - word was NOT guessed
+                                (currentRoom as any).wordWasGuessed = false;
                                 await currentRoom.save();
                                 const transitionPayload = JSON.stringify({ type: 'room_state_update', room: currentRoom.toJSON() });
                                 
@@ -217,17 +219,26 @@ export const wsRoutes = new Elysia({ prefix: '/ws/rooms' })
             if (player.inGameRole === 'host') {
                 if (parsedMessage.type === 'trigger_showdown' && room.status === 'playing') {
                     logger.info({ roomId, deviceId }, 'Host triggered showdown phase manually');
-                    
+
                     // Clear quiz timeout since host manually triggered
                     const roomTimers = activeTimers.get(roomId);
                     if (roomTimers && roomTimers.quizTimeout) {
                         clearTimeout(roomTimers.quizTimeout);
                         roomTimers.quizTimeout = undefined;
                     }
+
+                    // Use the wordGuessed parameter from the message
+                    const wordWasGuessed = parsedMessage.wordGuessed === true;
                     
                     room.status = 'showdown_discussion';
                     room.phaseEndTime = Date.now() + (room.timerConfig.discussion * 1000);
+                    room.wordWasGuessed = wordWasGuessed; // Use the proper field from schema
+                    
+                    logger.info({ roomId, wordWasGuessed }, 'Showdown phase started');
+
+                    // Save immediately to persist the wordWasGuessed field
                     await room.save();
+                    
                     const transitionPayload = JSON.stringify({ type: 'room_state_update', room: room.toJSON() });
                     ws.publish(`room:${roomId}`, transitionPayload);
                     ws.send(transitionPayload);
@@ -287,15 +298,17 @@ export const wsRoutes = new Elysia({ prefix: '/ws/rooms' })
                 // Reveal roles and end game
                 if (parsedMessage.type === 'reveal_roles' && room.status === 'showdown_voting') {
                     logger.info({ roomId, deviceId }, 'Host revealed roles and ended game');
-                    
+
                     // Calculate results
                     const insider = room.players.find(p => p.inGameRole === 'insider');
                     const insiderVotes = room.votes.filter(v => v.targetId === insider?.id).length;
                     const totalVotes = room.votes.length;
                     const insiderIdentified = totalVotes > 0 && insiderVotes > totalVotes / 2;
-                    const wordGuessed = true; // Already guessed to reach this phase
+
+                    // Use the persisted wordWasGuessed field from the database
+                    const wordGuessed = room.wordWasGuessed === true;
                     const commonsWin = wordGuessed && insiderIdentified;
-                    
+
                     // Update state
                     room.status = 'completed';
                     room.gameResult = {

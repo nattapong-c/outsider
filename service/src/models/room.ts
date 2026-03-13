@@ -44,7 +44,8 @@ export const RoomSchema = t.Object({
     phaseEndTime: t.Union([t.Number(), t.Null()]),
     players: t.Array(PlayerSchema),
     votes: t.Array(VoteSchema),
-    gameResult: t.Union([GameResultSchema, t.Null()])
+    gameResult: t.Union([GameResultSchema, t.Null()]),
+    wordWasGuessed: t.Optional(t.Boolean())
 });
 
 export type PlayerType = typeof PlayerSchema.static;
@@ -76,7 +77,7 @@ const gameResultMongooseSchema = new Schema<GameResultType>({
 const timerConfigMongooseSchema = new Schema({
     quiz: { type: Number, required: true, default: 180 },
     discussion: { type: Number, required: true, default: 180 },
-    votingMode: { type: String, enum: ['auto', 'manual'], required: true, default: 'auto' },
+    votingMode: { type: String, enum: ['auto', 'manual'], required: true, default: 'manual' }, // Default to manual
     difficulty: { type: String, enum: ['easy', 'medium', 'hard'], required: true, default: 'medium' },
     language: { type: String, enum: ['english', 'thai'], required: true, default: 'english' }
 }, { _id: false });
@@ -92,12 +93,13 @@ const roomMongooseSchema = new Schema<RoomType>({
     secretWord: { type: String, default: '' },
     timerConfig: {
         type: timerConfigMongooseSchema,
-        default: () => ({ quiz: 180, discussion: 180, votingMode: 'auto' })
+        default: () => ({ quiz: 180, discussion: 180, votingMode: 'manual' }) // Default to manual
     },
     phaseEndTime: { type: Number, default: null },
     players: [playerMongooseSchema],
     votes: [voteMongooseSchema],
-    gameResult: { type: gameResultMongooseSchema, default: null }
+    gameResult: { type: gameResultMongooseSchema, default: null },
+    wordWasGuessed: { type: Boolean, default: false } // Track if word was guessed or timer expired
 }, { timestamps: true });
 
 // TTL Index - Auto-delete rooms after 12 hours (43200 seconds)
