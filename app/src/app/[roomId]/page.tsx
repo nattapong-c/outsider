@@ -710,7 +710,7 @@ export default function RoomPage() {
                             </div>
 
                             {/* Quiz Phase Area - Clean placeholder for future chat UI */}
-                            {roomState?.status === 'playing' && remainingTime && remainingTime > 0 && (
+                            {roomState?.status === 'playing' && remainingTime !== null && remainingTime > 0 && (
                                 <div className="flex-1 modern-card border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-4 bg-gray-900/30">
                                     <div className="text-center">
                                         <p className="text-gray-400 text-lg mb-2">Quiz Phase</p>
