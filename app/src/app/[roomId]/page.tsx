@@ -314,9 +314,9 @@ export default function RoomPage() {
                     OUTSIDER
                 </h1>
                 <div className="flex items-center gap-4 flex-wrap justify-center">
-                    {roomState?.phaseEndTime && 
-                     (roomState?.status === 'playing' || roomState?.status === 'showdown_discussion') && 
-                     remainingTime && remainingTime > 0 && (
+                    {roomState?.phaseEndTime &&
+                     (roomState?.status === 'playing' || roomState?.status === 'showdown_discussion') &&
+                     remainingTime !== null && (
                         <div className={`px-4 py-2 rounded-lg border font-bold text-sm md:text-base tracking-wider flex items-center gap-2 ${
                             remainingTime === 0
                                 ? 'border-red-500/50 bg-red-900/20 text-red-400 animate-pulse'
