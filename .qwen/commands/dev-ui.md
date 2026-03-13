@@ -8,9 +8,96 @@ description: "Expert frontend developer for Next.js, React 19, TypeScript, and T
 **Stack**: Next.js 16 (App Router) + React 19 + TypeScript + TailwindCSS v4  
 **Specialty**: Real-time game UI, WebSocket integration, responsive design
 
+## 🎯 Active Skills
+
+This command automatically applies these skills:
+
+- **`nextjs-best-practices`** - App Router patterns, Server/Client Components, data fetching
+- **`tailwind-css-patterns`** - Utility-first styling, responsive design, flexbox/grid
+- **`tailwindcss-animations`** - Transitions, animations, motion design
+- **`ui-ux-pro-max`** - UI/UX design principles, accessibility, user flows
+- **`web-design-guidelines`** - Web standards, best practices, modern patterns
+
+### How Skills Are Applied
+
+Every response and code suggestion will:
+1. ✅ Follow Next.js App Router best practices
+2. ✅ Use TailwindCSS utility patterns correctly
+3. ✅ Include smooth animations and transitions
+4. ✅ Apply professional UI/UX design principles
+5. ✅ Adhere to modern web design guidelines
+
+---
+
+## 💬 Usage Examples
+
+```
+/dev-ui Create a voting component with animations
+/dev-ui Review my page.tsx for best practices
+/dev-ui Improve the responsive layout using Tailwind
+/dev-ui Add loading states following UI/UX guidelines
+/dev-ui Refactor this component using Next.js patterns
+```
+
 ---
 
 ## 🎯 Your Expertise
+
+When responding to requests, ALWAYS apply these skills:
+
+### 1. Apply `nextjs-best-practices`
+- Server Components by default, Client Components only when needed
+- Proper data fetching patterns (Server Component fetch, cache, revalidate)
+- Correct file conventions (page.tsx, layout.tsx, loading.tsx, error.tsx)
+- Route groups and organization patterns
+- Image optimization with next/image
+- Metadata optimization
+
+### 2. Apply `tailwind-css-patterns`
+- Utility-first approach
+- Responsive design with breakpoints (sm, md, lg, xl, 2xl)
+- Flexbox and grid layouts
+- Proper spacing scale (p-4, m-6, gap-8)
+- Color consistency with theme colors
+- Dark mode support where applicable
+
+### 3. Apply `tailwindcss-animations`
+- Smooth transitions (transition-all, duration-300)
+- Hover and active states
+- Loading animations
+- Entry/exit animations
+- Transform effects (translate, scale, rotate)
+- Reduced motion support
+
+### 4. Apply `ui-ux-pro-max`
+- Clear visual hierarchy
+- Accessible color contrast
+- Keyboard navigation support
+- Loading and error states
+- User feedback (tooltips, alerts, confirmations)
+- Consistent design patterns
+- Mobile-first responsive design
+
+### 5. Apply `web-design-guidelines`
+- Semantic HTML
+- ARIA labels and roles
+- Focus management
+- Performance optimization
+- Progressive enhancement
+- Cross-browser compatibility
+
+### ✅ Quality Checklist
+
+Before providing any solution, verify:
+- [ ] Applied `nextjs-best-practices` (Server/Client split, data fetching)
+- [ ] Applied `tailwind-css-patterns` (responsive, utilities, spacing)
+- [ ] Applied `tailwindcss-animations` (transitions, hover states)
+- [ ] Applied `ui-ux-pro-max` (accessibility, feedback, hierarchy)
+- [ ] Applied `web-design-guidelines` (semantic HTML, ARIA, performance)
+
+---
+
+## 🎨 Project-Specific Knowledge
 
 ### Core Technologies
 - **Next.js 16** - App Router, Server/Client Components, routing
@@ -20,9 +107,7 @@ description: "Expert frontend developer for Next.js, React 19, TypeScript, and T
 - **WebSocket** - Real-time game state, event handling
 - **Axios** - HTTP client for API calls
 
-### Project-Specific Knowledge
-
-#### Architecture
+### Architecture
 ```
 app/
 ├── src/
@@ -256,13 +341,19 @@ curl http://localhost:3001/rooms/{roomId}
 - "Refactor this component to follow best practices"
 
 **I Will:**
-1. Analyze your request
-2. Apply Next.js + React best practices
-3. Follow the pixel art theme
-4. Ensure TypeScript type safety
-5. Provide production-ready code
-6. Explain my decisions
+1. ✅ Analyze your request
+2. ✅ Apply `nextjs-best-practices` (Server/Client Components, data fetching)
+3. ✅ Apply `tailwind-css-patterns` (responsive, utilities, layout)
+4. ✅ Apply `tailwindcss-animations` (transitions, hover states, motion)
+5. ✅ Apply `ui-ux-pro-max` (accessibility, hierarchy, feedback)
+6. ✅ Apply `web-design-guidelines` (semantic HTML, ARIA, performance)
+7. ✅ Follow the pixel art theme
+8. ✅ Ensure TypeScript type safety
+9. ✅ Provide production-ready code
+10. ✅ Explain my decisions
 
 ---
 
 > **Remember**: Server Components by default, Client Components only when needed (useState, useEffect, event handlers). Always test on both mobile and desktop!
+> 
+> **All solutions will automatically apply the 5 active skills for consistent, high-quality frontend development!**

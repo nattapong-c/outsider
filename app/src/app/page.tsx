@@ -8,29 +8,25 @@ export default function Home() {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
     const [joinRoomId, setJoinRoomId] = useState('');
+    const [error, setError] = useState<string | null>(null);
 
     const handleCreateRoom = async () => {
         setIsLoading(true);
+        setError(null);
+
         try {
             const response = await api.rooms.create();
-            console.log('Create room response:', response);
-            
-            // Axios returns { data, status, headers, ... }
-            // Backend returns { roomId: "..." }
             const responseData = response.data || response;
             const roomId = responseData.roomId;
-            
+
             if (roomId) {
-                router.push(`/${roomId}`);
+                window.location.href = `/${roomId}`;
             } else {
-                console.error('No roomId in response:', responseData);
-                alert('Failed to create room: No room ID returned');
+                setError('Failed to create room: No room ID returned');
+                setIsLoading(false);
             }
         } catch (error: any) {
-            console.error('Failed to create room:', error);
-            console.error('Error details:', error.response?.data || error.message);
-            alert(`Failed to create room: ${error.response?.data || error.message}`);
-        } finally {
+            setError(`Failed to create room: ${error.response?.data || error.message}`);
             setIsLoading(false);
         }
     };
@@ -43,44 +39,109 @@ export default function Home() {
     };
 
     return (
-        <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-gray-900 text-white font-mono">
-            <h1 className="text-6xl font-bold mb-8 tracking-widest text-center" style={{ textShadow: '4px 4px 0px #3b82f6' }}>
-                OUTSIDER
-            </h1>
-            <p className="text-xl mb-12 text-gray-300 text-center">The Digital Evolution of the Physical Board Game</p>
-            
-            <div className="flex flex-col gap-8 w-full max-w-sm">
-                <button 
-                    onClick={handleCreateRoom}
-                    disabled={isLoading}
-                    className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-8 rounded border-b-4 border-blue-800 hover:border-blue-700 active:border-b-0 active:mt-4 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-xl"
-                >
-                    {isLoading ? 'CREATING...' : 'CREATE NEW ROOM'}
-                </button>
-
-                <div className="flex items-center gap-4 my-2">
-                    <hr className="flex-1 border-gray-600" />
-                    <span className="text-gray-400 font-bold">OR</span>
-                    <hr className="flex-1 border-gray-600" />
+        <main className="min-h-screen modern-bg flex flex-col items-center justify-center p-4">
+            <div className="w-full max-w-2xl animate-fade-in">
+                {/* Title */}
+                <div className="text-center mb-12">
+                    <h1 className="text-5xl md:text-7xl font-bold mb-4 bg-gradient-to-r from-blue-400 via-purple-400 to-green-400 bg-clip-text text-transparent">
+                        OUTSIDER
+                    </h1>
+                    <p className="text-gray-400 text-sm md:text-base tracking-widest uppercase">
+                        Social Deduction Game
+                    </p>
                 </div>
 
-                <form onSubmit={handleJoinRoom} className="flex flex-col gap-4">
-                    <input 
-                        type="text" 
-                        placeholder="ENTER ROOM ID" 
-                        value={joinRoomId}
-                        onChange={(e) => setJoinRoomId(e.target.value.toUpperCase())}
-                        className="w-full p-4 bg-gray-800 border-2 border-gray-600 rounded text-center text-white focus:outline-none focus:border-green-500 text-xl uppercase tracking-widest"
-                        maxLength={6}
-                    />
-                    <button 
-                        type="submit"
-                        disabled={!joinRoomId.trim()}
-                        className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-8 rounded border-b-4 border-green-800 hover:border-green-700 active:border-b-0 active:mt-4 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-xl"
-                    >
-                        JOIN ROOM
-                    </button>
-                </form>
+                {/* Error Message */}
+                {error && (
+                    <div className="mb-6 modern-card border-red-500/50">
+                        <div className="flex items-center gap-3 text-red-400 p-4">
+                            <span className="text-xl">⚠️</span>
+                            <span>{error}</span>
+                        </div>
+                    </div>
+                )}
+
+                {/* Main Card */}
+                <div className="modern-card p-6 md:p-8">
+                    {/* Create Room */}
+                    <div className="mb-8">
+                        <button
+                            onClick={handleCreateRoom}
+                            disabled={isLoading}
+                            className="w-full modern-button modern-button-primary text-lg md:text-xl font-bold tracking-wide py-5"
+                        >
+                            <span className="flex items-center justify-center gap-3">
+                                {isLoading ? (
+                                    <>
+                                        <span className="animate-spin text-2xl">⏳</span>
+                                        Creating...
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="text-2xl">🎮</span>
+                                        Create New Room
+                                    </>
+                                )}
+                            </span>
+                        </button>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="flex items-center gap-4 my-6">
+                        <hr className="flex-1 border-gray-700" />
+                        <span className="text-gray-500 text-sm font-medium">OR</span>
+                        <hr className="flex-1 border-gray-700" />
+                    </div>
+
+                    {/* Join Room Form */}
+                    <form onSubmit={handleJoinRoom} className="flex flex-col gap-4">
+                        <div className="relative">
+                            <input
+                                type="text"
+                                placeholder="ENTER ROOM ID"
+                                value={joinRoomId}
+                                onChange={(e) => setJoinRoomId(e.target.value.toUpperCase())}
+                                className="w-full modern-input p-4 text-center text-lg tracking-widest"
+                                maxLength={6}
+                                autoComplete="off"
+                            />
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-xs">
+                                {joinRoomId.length}/6
+                            </div>
+                        </div>
+
+                        <button
+                            type="submit"
+                            disabled={!joinRoomId.trim()}
+                            className="w-full modern-button modern-button-success text-lg md:text-xl font-bold tracking-wide py-5"
+                        >
+                            <span className="flex items-center justify-center gap-3">
+                                <span className="text-2xl">🚪</span>
+                                Join Room
+                            </span>
+                        </button>
+                    </form>
+                </div>
+
+                {/* Footer Info */}
+                <div className="mt-8 text-center text-gray-500 text-xs tracking-widest">
+                    <p className="flex items-center justify-center gap-4 flex-wrap">
+                        <span className="flex items-center gap-1.5">
+                            <span>👥</span>
+                            4-8 Players
+                        </span>
+                        <span className="text-gray-700">•</span>
+                        <span className="flex items-center gap-1.5">
+                            <span>⏱️</span>
+                            5-10 Min
+                        </span>
+                        <span className="text-gray-700">•</span>
+                        <span className="flex items-center gap-1.5">
+                            <span>🎯</span>
+                            Social Deduction
+                        </span>
+                    </p>
+                </div>
             </div>
         </main>
     );

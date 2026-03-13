@@ -44,6 +44,7 @@ export default function RoomPage() {
     const [selectedDifficulty, setSelectedDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
     const [selectedLanguage, setSelectedLanguage] = useState<'english' | 'thai'>('english');
     const [isWordVisible, setIsWordVisible] = useState(false);
+    const [isRoleHidden, setIsRoleHidden] = useState(true); // Hide role by default for privacy
     const wsRef = useRef<WebSocket | null>(null);
     const remainingTime = useCountdown(roomState?.phaseEndTime);
 
@@ -213,29 +214,59 @@ export default function RoomPage() {
         }
     };
 
-    if (!deviceId) return <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center font-mono">Loading Identity...</div>;
+    if (!deviceId) return (
+        <div className="min-h-screen modern-bg flex items-center justify-center font-sans">
+            <div className="modern-card p-8 text-center">
+                <div className="modern-glow text-2xl mb-4">⏳</div>
+                <p className="text-yellow-500 tracking-widest uppercase">Loading Identity...</p>
+            </div>
+        </div>
+    );
 
     if (!hasJoined) {
         return (
-            <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-gray-900 text-white font-mono">
-                <div className="bg-gray-800 p-8 rounded-lg border-4 border-gray-700 w-full max-w-md shadow-[8px_8px_0px_rgba(0,0,0,0.5)]">
-                    <h2 className="text-3xl mb-6 text-center font-bold">Join Room: {roomId}</h2>
-                    {error && <p className="text-red-400 mb-4 text-center bg-red-900/30 p-2 rounded">{error}</p>}
+            <div className="min-h-screen modern-bg flex flex-col items-center justify-center p-4 font-sans relative overflow-hidden">
+                {/* Floating Particles */}
+                <div className="">
+                    <div className="" style={{ left: '10%', animationDelay: '0s' }}></div>
+                    <div className="" style={{ left: '30%', animationDelay: '1.5s' }}></div>
+                    <div className="" style={{ left: '70%', animationDelay: '0.8s' }}></div>
+                    <div className="" style={{ left: '90%', animationDelay: '2s' }}></div>
+                </div>
+                
+                <div className="modern-card p-8 w-full max-w-md relative z-10">
+                    <h2 className="text-2xl mb-6 text-center font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-green-400 bg-clip-text text-transparent tracking-wider">
+                        Join Room: {roomId}
+                    </h2>
+                    {error && (
+                        <div className="mb-6 p-4 modern-card bg-red-900/50 text-red-200 rounded-lg animate-pulse">
+                            <div className="flex items-center gap-3">
+                                <span className="text-xl">❌</span>
+                                <span className="font-bold">{error}</span>
+                            </div>
+                        </div>
+                    )}
                     <form onSubmit={handleJoin} className="flex flex-col gap-6">
                         <div>
-                            <label className="block text-gray-400 mb-2">Nickname</label>
+                            <label className="block text-gray-400 mb-2 tracking-wider uppercase text-sm">Nickname</label>
                             <input
                                 type="text"
                                 placeholder="Enter your name"
                                 value={nickname}
                                 onChange={(e) => setNickname(e.target.value)}
-                                className="w-full p-4 bg-gray-900 border-2 border-gray-600 rounded text-white focus:outline-none focus:border-blue-500 text-xl"
+                                className="w-full modern-input p-4 text-center text-xl tracking-widest"
                                 maxLength={15}
                                 autoFocus
                             />
                         </div>
-                        <button type="submit" className="bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-4 rounded border-b-4 border-green-800 hover:border-green-700 active:border-b-0 active:translate-y-1 transition-all text-xl">
-                            ENTER LOBBY
+                        <button 
+                            type="submit" 
+                            className="w-full modern-button text-gray-900 text-xl tracking-[0.15em] uppercase"
+                        >
+                            <span className="flex items-center justify-center gap-3">
+                                <span className="text-2xl">🚪</span>
+                                Enter Lobby
+                            </span>
                         </button>
                     </form>
                 </div>
@@ -254,52 +285,85 @@ export default function RoomPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-900 text-white font-mono p-4 md:p-8">
-            <header className="flex flex-col md:flex-row justify-between items-center mb-8 border-b-4 border-gray-800 pb-4 gap-4">
-                <h1 className="text-3xl font-bold tracking-widest text-blue-400">OUTSIDER</h1>
-                <div className="flex items-center gap-4">
-                    {roomState?.phaseEndTime && (
-                        <div className={`px-4 py-2 rounded border-2 font-bold text-xl ${remainingTime === 0 ? 'bg-red-900 border-red-500 text-white animate-pulse' : 'bg-gray-800 border-gray-600 text-green-400'}`}>
-                            ⏱ {formatTime(remainingTime)}
+        <div className="min-h-screen modern-bg font-sans p-4 md:p-8 relative overflow-hidden">
+            <header className="flex flex-col md:flex-row justify-between items-center mb-8 pb-4 gap-4 relative z-10 modern-card">
+                <h1 className="text-2xl md:text-3xl font-bold tracking-[0.2em] bg-gradient-to-r from-blue-400 via-purple-400 to-green-400 bg-clip-text text-transparent">
+                    OUTSIDER
+                </h1>
+                <div className="flex items-center gap-4 flex-wrap justify-center">
+                    {roomState?.phaseEndTime && 
+                     (roomState?.status === 'playing' || roomState?.status === 'showdown_discussion') && 
+                     remainingTime && remainingTime > 0 && (
+                        <div className={`px-4 py-2 rounded-lg border font-bold text-sm md:text-base tracking-wider flex items-center gap-2 ${
+                            remainingTime === 0
+                                ? 'border-red-500/50 bg-red-900/20 text-red-400 animate-pulse'
+                                : 'border-green-500/50 bg-green-900/20 text-green-400'
+                        }`}>
+                            <span>⏱</span>
+                            {formatTime(remainingTime)}
                         </div>
                     )}
-                    <div className="bg-gray-800 px-4 py-2 rounded border-2 border-gray-700">
-                        Room: <span className="font-bold text-yellow-400">{roomId}</span>
+                    <div className="px-4 py-2 rounded-lg border border-gray-700 bg-gray-900/50">
+                        <span className="text-gray-400 tracking-wider">Room:</span>{' '}
+                        <span className="font-bold text-yellow-400">{roomId}</span>
                     </div>
-                    <button onClick={handleLeaveRoom} className="bg-red-900 hover:bg-red-800 text-white text-sm font-bold py-2 px-4 rounded border-b-4 border-red-950 active:border-b-0 active:translate-y-1 transition-all">
-                        LEAVE
+                    <button
+                        onClick={handleLeaveRoom}
+                        className="px-4 py-2 modern-button bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 text-white text-sm tracking-[0.1em] uppercase"
+                    >
+                        Leave
                     </button>
                 </div>
             </header>
-            
-            <main className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+
+            <main className="grid grid-cols-1 lg:grid-cols-4 gap-8 relative z-10">
                 {/* Player List Sidebar */}
-                <div className="col-span-1 bg-gray-800 p-6 rounded-lg border-4 border-gray-700 h-fit shadow-[4px_4px_0px_rgba(0,0,0,0.3)]">
-                    <h2 className="text-xl mb-4 font-bold text-gray-300 uppercase tracking-wider">Players ({roomState?.players?.length}/8)</h2>
-                    <ul className="space-y-3">
+                <div className="col-span-1 modern-card p-6 h-fit">
+                    <h2 className="text-lg mb-4 font-bold text-gray-300 tracking-wider text-sm uppercase flex items-center gap-2">
+                        <span className="text-yellow-500">👥</span>
+                        Players ({roomState?.players?.length}/8)
+                    </h2>
+                    <ul className="space-y-2">
                         {roomState?.players?.map((player: any) => (
-                            <li key={player.id} className={`flex items-center gap-3 p-3 rounded border-2 ${player.deviceId === deviceId ? 'bg-blue-900/40 border-blue-700' : 'bg-gray-900 border-gray-700'} ${!player.isOnline ? 'opacity-40 grayscale' : ''}`}>
+                            <li
+                                key={player.id}
+                                className={`flex items-center gap-3 p-3 rounded-lg border ${
+                                    player.deviceId === deviceId
+                                        ? 'bg-blue-900/20 border-blue-500/50'
+                                        : 'bg-gray-900/50 border-gray-700'
+                                } ${!player.isOnline ? 'opacity-40 grayscale' : ''}`}
+                            >
                                 <div className="flex-1 overflow-hidden">
                                     <div className="flex items-center gap-2">
-                                        {player.isAdmin && <span title="Admin" className="text-yellow-400 text-xl">👑</span>}
-                                        <span className="font-bold truncate">{player.name}</span>
-                                        {player.deviceId === deviceId && <span className="text-xs text-blue-400">(You)</span>}
+                                        {player.isAdmin && (
+                                            <span title="Admin" className="text-yellow-400">👑</span>
+                                        )}
+                                        <span className="font-semibold truncate tracking-wide text-white">{player.name}</span>
+                                        {player.deviceId === deviceId && (
+                                            <span className="text-xs text-blue-400 bg-blue-900/50 px-2 py-0.5 rounded-full">(You)</span>
+                                        )}
                                     </div>
-                                    {!player.isOnline && <span className="text-xs text-red-400 block mt-1">Disconnected</span>}
+                                    {!player.isOnline && (
+                                        <span className="text-xs text-red-400 block mt-1 tracking-wide">Disconnected</span>
+                                    )}
                                 </div>
                                 <div className="flex flex-col gap-2">
                                     {isAdmin && roomState?.status === 'lobby' && (
-                                        <button 
+                                        <button
                                             onClick={() => setSelectedHostId(player.id)}
-                                            className={`text-xs px-3 py-1 rounded border transition-all ${selectedHostId === player.id ? 'bg-yellow-600 border-yellow-400 text-white font-bold shadow-[2px_2px_0px_#ca8a04]' : 'bg-gray-800 border-gray-600 text-gray-400 hover:bg-gray-700'}`}
+                                            className={`text-xs px-3 py-1 modern-button ${
+                                                selectedHostId === player.id
+                                                    ? 'bg-yellow-500 text-gray-900'
+                                                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                                            } tracking-wider uppercase`}
                                         >
-                                            {selectedHostId === player.id ? 'Host Selected' : 'Select as Host'}
+                                            {selectedHostId === player.id ? '✓' : 'Select'}
                                         </button>
                                     )}
                                     {isAdmin && player.deviceId !== deviceId && (
-                                        <button 
+                                        <button
                                             onClick={() => wsRef.current?.send(JSON.stringify({ type: 'kick_player', targetPlayerId: player.id }))}
-                                            className="text-red-500 hover:text-red-400 text-xs px-2 py-1 bg-gray-800 rounded border border-red-900"
+                                            className="text-red-400 hover:text-red-300 text-xs px-3 py-1.5 modern-button bg-red-900/30 tracking-wider uppercase"
                                         >
                                             Kick
                                         </button>
@@ -311,109 +375,116 @@ export default function RoomPage() {
                 </div>
                 
                 {/* Game Area */}
-                <div className="col-span-1 lg:col-span-3 bg-gray-800 p-6 lg:p-12 rounded-lg border-4 border-gray-700 min-h-[500px] flex flex-col shadow-[8px_8px_0px_rgba(0,0,0,0.3)]">
+                <div className="col-span-1 lg:col-span-3 modern-card min-h-[600px] flex flex-col p-6 md:p-12">
                     {roomState?.status === 'lobby' ? (
                         <div className="flex-1 flex flex-col items-center justify-center text-center">
-                            <h2 className="text-4xl text-gray-400 mb-8 font-bold">Waiting in Lobby</h2>
-                            <p className="text-xl text-gray-500 mb-12 max-w-lg">
-                                {isAdmin ? "Select a player to be the Host, configure timers, then start the game." : "Ensure everyone has joined. The admin will select the Host and start the game."}
+                            <h2 className="text-3xl md:text-4xl text-gray-400 mb-8 font-bold tracking-wider">
+                                Waiting in Lobby
+                            </h2>
+                            <p className="text-base md:text-lg text-gray-500 mb-12 max-w-lg leading-relaxed">
+                                {isAdmin
+                                    ? "Select a player to be the Host, configure timers, then start the game."
+                                    : "Ensure everyone has joined. The admin will select the Host and start the game."}
                             </p>
-                            
+
                             {isAdmin && (
-                                <div className="mb-12 bg-gray-900 p-6 rounded-lg border-2 border-gray-700 w-full max-w-md text-left">
-                                    <h3 className="text-xl text-blue-400 mb-4 font-bold border-b-2 border-gray-800 pb-2">Game Settings</h3>
+                                <div className="modern-card p-6 w-full max-w-md mb-8">
+                                    <h3 className="text-lg text-yellow-500 mb-4 font-bold tracking-wider uppercase flex items-center gap-2">
+                                        <span className="text-xl">⚙️</span>
+                                        Game Settings
+                                    </h3>
 
                                     {/* Word Language Selection */}
-                                    <div className="flex flex-col gap-4 mb-4">
-                                        <label className="text-gray-300">Word Language</label>
+                                    <div className="flex flex-col gap-4 mb-6">
+                                        <label className="text-gray-400 text-sm tracking-wider uppercase">Word Language</label>
                                         <div className="grid grid-cols-2 gap-3">
                                             <button
                                                 type="button"
                                                 onClick={() => setSelectedLanguage('english')}
-                                                className={`py-3 px-4 rounded border-4 transition-all ${
+                                                className={`py-3 px-4 modern-button transition-all flex flex-col items-center justify-center ${
                                                     selectedLanguage === 'english'
-                                                        ? 'bg-blue-600 border-blue-400 text-white font-bold shadow-[2px_2px_0px_#1e3a8a]'
-                                                        : 'bg-gray-800 border-gray-600 text-gray-400 hover:bg-gray-700'
+                                                        ? 'bg-blue-600 text-white'
+                                                        : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                                                 }`}
                                             >
-                                                <div className="text-lg">🇬🇧 English</div>
-                                                <div className="text-xs mt-1">Common nouns</div>
+                                                <div className="text-lg text-center">🇬🇧 English</div>
+                                                <div className="text-xs mt-1 tracking-wider text-center">Common nouns</div>
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={() => setSelectedLanguage('thai')}
-                                                className={`py-3 px-4 rounded border-4 transition-all ${
+                                                className={`py-3 px-4 modern-button transition-all flex flex-col items-center justify-center ${
                                                     selectedLanguage === 'thai'
-                                                        ? 'bg-red-600 border-red-400 text-white font-bold shadow-[2px_2px_0px_#7f1d1d]'
-                                                        : 'bg-gray-800 border-gray-600 text-gray-400 hover:bg-gray-700'
+                                                        ? 'bg-red-600 text-white'
+                                                        : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                                                 }`}
                                             >
-                                                <div className="text-lg">🇹🇭 ไทย</div>
-                                                <div className="text-xs mt-1">คำนามภาษาไทย</div>
+                                                <div className="text-lg text-center">🇹🇭 ไทย</div>
+                                                <div className="text-xs mt-1 tracking-wider text-center">คำนามภาษาไทย</div>
                                             </button>
                                         </div>
                                     </div>
 
                                     {/* Word Difficulty Selection */}
-                                    <div className="flex flex-col gap-4 mb-4">
-                                        <label className="text-gray-300">Word Difficulty</label>
+                                    <div className="flex flex-col gap-4 mb-6">
+                                        <label className="text-gray-400 text-sm tracking-wider uppercase">Word Difficulty</label>
                                         <div className="grid grid-cols-3 gap-3">
                                             <button
                                                 type="button"
                                                 onClick={() => setSelectedDifficulty('easy')}
-                                                className={`py-3 px-2 rounded border-4 transition-all ${
+                                                className={`py-3 px-2 modern-button transition-all flex flex-col items-center justify-center ${
                                                     selectedDifficulty === 'easy'
-                                                        ? 'bg-green-600 border-green-400 text-white font-bold shadow-[2px_2px_0px_#14532d]'
-                                                        : 'bg-gray-800 border-gray-600 text-gray-400 hover:bg-gray-700'
+                                                        ? 'bg-green-600 text-white'
+                                                        : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                                                 }`}
                                             >
-                                                <div className="text-sm">🟢 Easy</div>
-                                                <div className="text-xs mt-1">Common</div>
+                                                <div className="text-sm text-center">🟢 Easy</div>
+                                                <div className="text-xs mt-1 tracking-wider text-center">Common</div>
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={() => setSelectedDifficulty('medium')}
-                                                className={`py-3 px-2 rounded border-4 transition-all ${
+                                                className={`py-3 px-2 modern-button transition-all flex flex-col items-center justify-center ${
                                                     selectedDifficulty === 'medium'
-                                                        ? 'bg-yellow-600 border-yellow-400 text-white font-bold shadow-[2px_2px_0px_#78350f]'
-                                                        : 'bg-gray-800 border-gray-600 text-gray-400 hover:bg-gray-700'
+                                                        ? 'bg-yellow-600 text-white'
+                                                        : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                                                 }`}
                                             >
-                                                <div className="text-sm">🟡 Medium</div>
-                                                <div className="text-xs mt-1">Specific</div>
+                                                <div className="text-sm text-center">🟡 Medium</div>
+                                                <div className="text-xs mt-1 tracking-wider text-center">Specific</div>
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={() => setSelectedDifficulty('hard')}
-                                                className={`py-3 px-2 rounded border-4 transition-all ${
+                                                className={`py-3 px-2 modern-button transition-all flex flex-col items-center justify-center ${
                                                     selectedDifficulty === 'hard'
-                                                        ? 'bg-red-600 border-red-400 text-white font-bold shadow-[2px_2px_0px_#7f1d1d]'
-                                                        : 'bg-gray-800 border-gray-600 text-gray-400 hover:bg-gray-700'
+                                                        ? 'bg-red-600 text-white'
+                                                        : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                                                 }`}
                                             >
-                                                <div className="text-sm">🔴 Hard</div>
-                                                <div className="text-xs mt-1">Complex</div>
+                                                <div className="text-sm text-center">🔴 Hard</div>
+                                                <div className="text-xs mt-1 tracking-wider text-center">Complex</div>
                                             </button>
                                         </div>
                                     </div>
 
                                     {/* Current Settings Display */}
-                                    <div className="mt-4 p-3 bg-gray-800 rounded border-2 border-gray-600">
-                                        <p className="text-gray-400 text-sm mb-2">Current Settings:</p>
-                                        <div className="flex items-center gap-2">
-                                            <span className={`px-3 py-1 rounded font-bold text-sm ${
+                                    <div className="modern-card p-3 bg-gray-900/50 mb-6">
+                                        <p className="text-gray-400 text-xs mb-2 tracking-wider uppercase">Current Settings:</p>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span className={`px-3 py-1 modern-badge ${
                                                 selectedLanguage === 'english'
-                                                    ? 'bg-blue-900 text-blue-400'
-                                                    : 'bg-red-900 text-red-400'
+                                                    ? 'bg-blue-900/50 text-blue-400 border border-blue-500'
+                                                    : 'bg-red-900/50 text-red-400 border border-red-500'
                                             }`}>
                                                 {selectedLanguage === 'english' ? '🇬🇧 EN' : '🇹🇭 TH'}
                                             </span>
-                                            <span className={`px-3 py-1 rounded font-bold text-sm ${
+                                            <span className={`px-3 py-1 modern-badge ${
                                                 selectedDifficulty === 'easy'
-                                                    ? 'bg-green-900 text-green-400'
+                                                    ? 'bg-green-900/50 text-green-400 border border-green-500'
                                                     : selectedDifficulty === 'medium'
-                                                    ? 'bg-yellow-900 text-yellow-400'
-                                                    : 'bg-red-900 text-red-400'
+                                                    ? 'bg-yellow-900/50 text-yellow-400 border border-yellow-500'
+                                                    : 'bg-red-900/50 text-red-400 border border-red-500'
                                             }`}>
                                                 {selectedDifficulty === 'easy' ? 'Easy' : selectedDifficulty === 'medium' ? 'Medium' : 'Hard'}
                                             </span>
@@ -421,47 +492,52 @@ export default function RoomPage() {
                                     </div>
 
                                     {/* Timer Configuration */}
-                                    <h3 className="text-xl text-blue-400 mb-4 font-bold border-b-2 border-gray-800 pb-2 mt-6">Timer Configuration</h3>
+                                    <div className="modern-card p-4 bg-gray-900/30">
+                                        <h3 className="text-base text-yellow-500 mb-4 font-bold tracking-wider uppercase flex items-center gap-2">
+                                            <span className="text-lg">⏱️</span>
+                                            Timer Configuration
+                                        </h3>
 
-                                    <div className="flex flex-col gap-4">
-                                        <div className="flex justify-between items-center">
-                                            <label className="text-gray-300">Quiz Phase (seconds)</label>
-                                            <input
-                                                type="number"
-                                                value={localTimerConfig.quiz}
-                                                onChange={(e) => setLocalTimerConfig(prev => ({ ...prev, quiz: parseInt(e.target.value) || 0 }))}
-                                                onBlur={() => wsRef.current?.send(JSON.stringify({ type: 'update_timer_config', config: localTimerConfig }))}
-                                                className="w-24 p-2 bg-gray-800 border border-gray-600 rounded text-right text-white"
-                                            />
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                            <label className="text-gray-300">Discussion Phase (seconds)</label>
-                                            <input
-                                                type="number"
-                                                value={localTimerConfig.discussion}
-                                                onChange={(e) => setLocalTimerConfig(prev => ({ ...prev, discussion: parseInt(e.target.value) || 0 }))}
-                                                onBlur={() => wsRef.current?.send(JSON.stringify({ type: 'update_timer_config', config: localTimerConfig }))}
-                                                className="w-24 p-2 bg-gray-800 border border-gray-600 rounded text-right text-white"
-                                            />
-                                        </div>
-                                        <div className="flex justify-between items-center pt-2">
-                                            <label className="text-gray-300">Auto Voting (Timer)</label>
-                                            <input
-                                                type="checkbox"
-                                                checked={localTimerConfig.votingModeAuto}
-                                                onChange={(e) => {
-                                                    const newConfig = { 
-                                                        ...localTimerConfig, 
-                                                        votingModeAuto: e.target.checked 
-                                                    };
-                                                    setLocalTimerConfig(newConfig);
-                                                    wsRef.current?.send(JSON.stringify({ 
-                                                        type: 'update_timer_config', 
-                                                        config: newConfig 
-                                                    }));
-                                                }}
-                                                className="w-6 h-6 bg-gray-800 border-gray-600 rounded"
-                                            />
+                                        <div className="flex flex-col gap-4">
+                                            <div className="flex justify-between items-center">
+                                                <label className="text-gray-400 text-sm tracking-wider">Quiz Phase (seconds)</label>
+                                                <input
+                                                    type="number"
+                                                    value={localTimerConfig.quiz}
+                                                    onChange={(e) => setLocalTimerConfig(prev => ({ ...prev, quiz: parseInt(e.target.value) || 0 }))}
+                                                    onBlur={() => wsRef.current?.send(JSON.stringify({ type: 'update_timer_config', config: localTimerConfig }))}
+                                                    className="w-24 modern-input p-2 text-right"
+                                                />
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <label className="text-gray-400 text-sm tracking-wider">Discussion Phase (seconds)</label>
+                                                <input
+                                                    type="number"
+                                                    value={localTimerConfig.discussion}
+                                                    onChange={(e) => setLocalTimerConfig(prev => ({ ...prev, discussion: parseInt(e.target.value) || 0 }))}
+                                                    onBlur={() => wsRef.current?.send(JSON.stringify({ type: 'update_timer_config', config: localTimerConfig }))}
+                                                    className="w-24 modern-input p-2 text-right"
+                                                />
+                                            </div>
+                                            <div className="flex justify-between items-center pt-2">
+                                                <label className="text-gray-400 text-sm tracking-wider">Auto Voting (Timer)</label>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={localTimerConfig.votingModeAuto}
+                                                    onChange={(e) => {
+                                                        const newConfig = {
+                                                            ...localTimerConfig,
+                                                            votingModeAuto: e.target.checked
+                                                        };
+                                                        setLocalTimerConfig(newConfig);
+                                                        wsRef.current?.send(JSON.stringify({
+                                                            type: 'update_timer_config',
+                                                            config: newConfig
+                                                        }));
+                                                    }}
+                                                    className="w-6 h-6 bg-gray-800 border-gray-600 rounded"
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -469,107 +545,182 @@ export default function RoomPage() {
 
                             {isAdmin ? (
                                 <button
-                                    onClick={() => wsRef.current?.send(JSON.stringify({ 
-                                        type: 'start_game', 
+                                    onClick={() => wsRef.current?.send(JSON.stringify({
+                                        type: 'start_game',
                                         hostPlayerId: selectedHostId,
                                         difficulty: selectedDifficulty,
                                         language: selectedLanguage
                                     }))}
                                     disabled={roomState?.players?.length < 3 || !selectedHostId}
-                                    className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-6 px-12 rounded border-b-4 border-blue-800 hover:border-blue-700 active:border-b-0 active:translate-y-1 transition-all text-2xl disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="modern-button bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white text-2xl tracking-[0.2em] uppercase disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    START GAME
+                                    <span className="flex items-center justify-center gap-3">
+                                        <span className="text-3xl">🎮</span>
+                                        Start Game
+                                    </span>
                                 </button>
                             ) : (
-                                <div className="text-yellow-500 text-xl animate-pulse">Waiting for Admin to start...</div>
+                                <div className="text-yellow-500 text-xl tracking-wider modern-glow flex items-center gap-2">
+                                    <span className="animate-pulse">⏳</span>
+                                    Waiting for Admin to start...
+                                </div>
                             )}
                         </div>
                     ) : (
                         <div className="flex-1 flex flex-col">
-                            <div className="flex justify-between items-center mb-8 bg-gray-900 p-6 rounded border-2 border-gray-700">
-                                <div>
-                                    <h3 className="text-gray-400 text-sm uppercase mb-1">Your Role</h3>
-                                    <div className={`text-2xl font-bold ${currentPlayer?.inGameRole === 'insider' ? 'text-red-500' : currentPlayer?.inGameRole === 'host' ? 'text-yellow-400' : 'text-blue-400'}`}>
-                                        {currentPlayer?.inGameRole?.toUpperCase()}
+                            {/* Role & Secret Word Display - Mobile First */}
+                            <div className="modern-card p-4 md:p-6 mb-6">
+                                <div className="flex flex-col gap-4">
+                                    {/* Your Role Section - Mobile Optimized */}
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex-1">
+                                            <h3 className="text-gray-400 text-xs uppercase mb-2 tracking-wider">Your Role</h3>
+                                            {/* Host always sees their role, Commons & Insider can toggle */}
+                                            {currentPlayer?.inGameRole === 'host' ? (
+                                                <div className="text-2xl md:text-3xl font-bold text-yellow-400 modern-glow tracking-wider">
+                                                    {currentPlayer?.inGameRole?.toUpperCase()}
+                                                </div>
+                                            ) : isRoleHidden ? (
+                                                <div 
+                                                    onClick={() => setIsRoleHidden(false)}
+                                                    className="text-2xl md:text-3xl font-bold text-gray-500 tracking-wider cursor-pointer select-none flex items-center gap-2"
+                                                    title="Tap to reveal"
+                                                >
+                                                    <span>••••••</span>
+                                                    <span className="text-lg">👁️</span>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-2">
+                                                    <div className={`text-2xl md:text-3xl font-bold tracking-wider ${
+                                                        currentPlayer?.inGameRole === 'insider' ? 'text-red-500 modern-glow' :
+                                                        'text-blue-400'
+                                                    }`}>
+                                                        {currentPlayer?.inGameRole?.toUpperCase()}
+                                                    </div>
+                                                    <button
+                                                        onClick={() => setIsRoleHidden(true)}
+                                                        className="p-2 modern-card hover:bg-gray-700/50 transition-all"
+                                                        title="Hide role"
+                                                    >
+                                                        <span className="text-lg">🙈</span>
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                                <div className="text-right flex flex-col items-end gap-2">
-                                    <h3 className="text-gray-400 text-sm uppercase mb-1">Secret Word</h3>
-                                    {currentPlayer?.inGameRole === 'host' || currentPlayer?.inGameRole === 'insider' ? (
-                                        <button
-                                            onClick={() => setIsWordVisible(!isWordVisible)}
-                                            className="text-3xl font-bold tracking-widest bg-gray-800 px-4 py-1 rounded border border-gray-600 hover:bg-gray-700 transition-colors focus:outline-none flex items-center gap-2"
-                                            title="Click to toggle visibility"
-                                        >
-                                            {isWordVisible ? roomState?.secretWord : '••••••••'}
-                                            <span className="text-sm text-gray-400 ml-2">{isWordVisible ? '🙈' : '👁️'}</span>
-                                        </button>
-                                    ) : (
-                                        <div
-                                            className="text-3xl font-bold tracking-widest bg-gray-800 px-4 py-1 rounded border border-gray-600 flex items-center gap-2 cursor-not-allowed opacity-50"
-                                            title="Only the Host and Insider can reveal the secret word."
-                                        >
-                                            ••••••••
-                                            <span className="text-sm text-gray-400 ml-2">👁️</span>
-                                        </div>
-                                    )}
-                                    {/* Display word language and difficulty */}
-                                    {roomState?.timerConfig?.difficulty && roomState?.timerConfig?.language && (
-                                        <div className="flex items-center gap-2 justify-end">
-                                            <span className={`px-2 py-1 rounded border-2 font-bold text-xs ${
-                                                roomState.timerConfig.language === 'english'
-                                                    ? 'bg-blue-900/40 border-blue-500 text-blue-400'
-                                                    : 'bg-red-900/40 border-red-500 text-red-400'
-                                            }`}>
-                                                {roomState.timerConfig.language === 'english' ? '🇬🇧 EN' : '🇹🇭 TH'}
-                                            </span>
-                                            <span className={`px-2 py-1 rounded border-2 font-bold text-xs ${
-                                                roomState.timerConfig.difficulty === 'easy'
-                                                    ? 'bg-green-900/40 border-green-500 text-green-400'
-                                                    : roomState.timerConfig.difficulty === 'medium'
-                                                    ? 'bg-yellow-900/40 border-yellow-500 text-yellow-400'
-                                                    : 'bg-red-900/40 border-red-500 text-red-400'
-                                            }`}>
-                                                {roomState.timerConfig.difficulty === 'easy' ? 'Easy' : roomState.timerConfig.difficulty === 'medium' ? 'Medium' : 'Hard'}
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                            
-                            <div className="flex-1 flex items-center justify-center border-4 border-dashed border-gray-700 rounded-lg p-8 flex-col gap-4">
-                                <p className="text-gray-500 text-xl text-center mb-4">
-                                    [Quiz Phase / Chat UI will be implemented here]
-                                </p>
 
-                                {currentPlayer?.inGameRole === 'host' && roomState?.status === 'playing' && (
-                                    <div className="flex flex-col gap-4 items-center">
-                                        <button
-                                            onClick={() => wsRef.current?.send(JSON.stringify({ type: 'trigger_showdown' }))}
-                                            className="bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-8 rounded border-b-4 border-green-800 hover:border-green-700 active:border-b-0 active:translate-y-1 transition-all text-lg shadow-[4px_4px_0px_#14532d]"
-                                        >
-                                            ✅ Word Guessed!
-                                        </button>
-
-                                        {roomState.timerConfig.votingMode === 'manual' && remainingTime === 0 && (
+                                    {/* Secret Word Section - Mobile Optimized */}
+                                    <div className="flex flex-col gap-3">
+                                        <div className="flex items-center justify-between">
+                                            <h3 className="text-gray-400 text-xs uppercase tracking-wider">Secret Word</h3>
+                                            {roomState?.timerConfig?.difficulty && roomState?.timerConfig?.language && (
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`px-2 py-1 modern-badge text-xs ${
+                                                        roomState.timerConfig.language === 'english'
+                                                            ? 'bg-blue-900/50 text-blue-400 border border-blue-500'
+                                                            : 'bg-red-900/50 text-red-400 border border-red-500'
+                                                    }`}>
+                                                        {roomState.timerConfig.language === 'english' ? '🇬🇧' : '🇹🇭'}
+                                                    </span>
+                                                    <span className={`px-2 py-1 modern-badge text-xs ${
+                                                        roomState.timerConfig.difficulty === 'easy'
+                                                            ? 'bg-green-900/50 text-green-400 border border-green-500'
+                                                            : roomState.timerConfig.difficulty === 'medium'
+                                                            ? 'bg-yellow-900/50 text-yellow-400 border border-yellow-500'
+                                                            : 'bg-red-900/50 text-red-400 border border-red-500'
+                                                    }`}>
+                                                        {roomState.timerConfig.difficulty === 'easy' ? '🟢' :
+                                                         roomState.timerConfig.difficulty === 'medium' ? '🟡' : '🔴'}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        
+                                        {currentPlayer?.inGameRole === 'host' || currentPlayer?.inGameRole === 'insider' ? (
                                             <button
-                                                onClick={() => wsRef.current?.send(JSON.stringify({ type: 'trigger_showdown' }))}
-                                                className="bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-3 px-8 rounded border-b-4 border-yellow-800 hover:border-yellow-700 active:border-b-0 active:translate-y-1 transition-all text-lg"
+                                                onClick={() => setIsWordVisible(!isWordVisible)}
+                                                className="w-full text-xl md:text-2xl font-bold tracking-[0.2em] modern-card bg-gray-900/50 px-4 py-3
+                                                         hover:bg-gray-800/50 transition-all modern-glow flex items-center justify-center gap-3"
+                                                title="Click to toggle visibility"
                                             >
-                                                ⏳ Time's Up - Proceed to Discussion
+                                                {isWordVisible ? (
+                                                    <>
+                                                        <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-green-400 bg-clip-text text-transparent text-center">
+                                                            {roomState?.secretWord}
+                                                        </span>
+                                                        <span className="text-xl">🙈</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <span>••••••••</span>
+                                                        <span className="text-xl">👁️</span>
+                                                    </>
+                                                )}
                                             </button>
+                                        ) : (
+                                            <div
+                                                className="w-full text-xl md:text-2xl font-bold tracking-[0.2em] modern-card bg-gray-900/50 px-4 py-3
+                                                         flex items-center justify-center gap-3 cursor-not-allowed opacity-50"
+                                                title="Only the Host and Insider can reveal the secret word."
+                                            >
+                                                <span>••••••••</span>
+                                                <span className="text-xl">👁️</span>
+                                            </div>
                                         )}
                                     </div>
-                                )}
+                                </div>
                             </div>
 
-                            {isAdmin && (
+                            {/* Quiz Phase Area - Clean placeholder for future chat UI */}
+                            {roomState?.status === 'playing' && remainingTime && remainingTime > 0 && (
+                                <div className="flex-1 modern-card border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-4 bg-gray-900/30">
+                                    <div className="text-center">
+                                        <p className="text-gray-400 text-lg mb-2">Quiz Phase</p>
+                                        <p className="text-gray-500 text-sm">Ask Yes/No questions to the Host</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Host Controls - Word Guessed Button (Outside Quiz Phase) */}
+                            {currentPlayer?.inGameRole === 'host' && roomState?.status === 'playing' && (
+                                <div className="mt-6 flex flex-col gap-4 items-center">
+                                    <button
+                                        onClick={() => wsRef.current?.send(JSON.stringify({ type: 'trigger_showdown' }))}
+                                        className="modern-button text-white text-xl tracking-[0.15em] uppercase
+                                                 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400
+                                                 w-full md:w-auto md:px-12 py-4"
+                                    >
+                                        <span className="flex items-center justify-center gap-3">
+                                            <span className="text-3xl">✅</span>
+                                            Word Guessed!
+                                        </span>
+                                    </button>
+
+                                    {roomState.timerConfig.votingMode === 'manual' && remainingTime === 0 && (
+                                        <button
+                                            onClick={() => wsRef.current?.send(JSON.stringify({ type: 'trigger_showdown' }))}
+                                            className="modern-button text-white text-lg tracking-[0.1em] uppercase
+                                                     bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400
+                                                     w-full md:w-auto md:px-8 py-3"
+                                        >
+                                            <span className="flex items-center justify-center gap-2">
+                                                <span className="text-2xl">⏳</span>
+                                                Time's Up - Proceed to Discussion
+                                            </span>
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Force End Round - Admin Only (Only show when game is not completed) */}
+                            {isAdmin && roomState?.status !== 'completed' && (
                                 <div className="mt-8 pt-6 border-t-2 border-gray-700 flex justify-end">
                                     <button
                                         onClick={() => wsRef.current?.send(JSON.stringify({ type: 'end_round' }))}
-                                        className="bg-red-900 hover:bg-red-800 text-white text-sm font-bold py-3 px-6 rounded border-b-4 border-red-950 active:border-b-0 active:translate-y-1"
+                                        className="modern-button text-white text-sm tracking-[0.1em] uppercase
+                                                 bg-gradient-to-r from-red-900 to-red-800 hover:from-red-800 hover:to-red-700"
                                     >
-                                        FORCE END ROUND
+                                        Force End Round
                                     </button>
                                 </div>
                             )}
@@ -578,33 +729,49 @@ export default function RoomPage() {
 
                     {/* Showdown Discussion Phase */}
                     {roomState?.status === 'showdown_discussion' && (
-                        <div className="flex-1 flex flex-col">
-                            <div className="bg-purple-900/30 border-4 border-purple-600 p-6 rounded-lg mb-6">
-                                <h2 className="text-2xl font-bold text-purple-400 mb-2">
-                                    🎯 SHOWDOWN PHASE
-                                </h2>
-                                <p className="text-gray-300">
-                                    Discuss and analyze: Who is the Insider? The word has been guessed!
+                        <div className="flex-1 flex flex-col animate-fade-in mt-8">
+                            {/* Phase Header */}
+                            <div className="modern-card p-6 mb-6 border-purple-500/50 modern-glow">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <span className="text-3xl">🎯</span>
+                                    <h2 className="text-2xl font-bold text-white">Showdown Phase</h2>
+                                </div>
+                                <p className="text-gray-400">
+                                    Discuss and analyze: Who is the Insider?
                                 </p>
                             </div>
 
+                            {/* Host Control - Manual Voting */}
                             {currentPlayer?.inGameRole === 'host' && roomState.timerConfig.votingMode === 'manual' && (
                                 <div className="mb-6">
                                     <button
                                         onClick={() => wsRef.current?.send(JSON.stringify({ type: 'start_voting' }))}
-                                        className="bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 px-8 rounded border-b-4 border-purple-800 hover:border-purple-700 active:border-b-0 active:translate-y-1 transition-all text-xl w-full"
+                                        className="w-full modern-button bg-purple-600 hover:bg-purple-500 text-white text-lg tracking-wide"
                                     >
-                                        🗳️ START VOTING PHASE
+                                        <span className="flex items-center justify-center gap-2">
+                                            <span>🗳️</span>
+                                            Start Voting Phase
+                                        </span>
                                     </button>
                                 </div>
                             )}
 
-                            <div className="flex-1 flex items-center justify-center border-4 border-dashed border-purple-700 rounded-lg p-8">
-                                <p className="text-purple-300 text-xl text-center">
-                                    {roomState.timerConfig.votingMode === 'auto' 
-                                        ? `Voting will start automatically when timer ends`
-                                        : `Waiting for Host to start voting...`
-                                    }
+                            {/* Waiting Message */}
+                            <div className="flex-1 modern-card border-dashed border-gray-700 p-8 flex items-center justify-center">
+                                <p className="text-gray-400 text-center">
+                                    {roomState.timerConfig.votingMode === 'auto'
+                                        ? (
+                                            <>
+                                                <span className="block text-2xl mb-2">⏱️</span>
+                                                Voting starts automatically when timer ends
+                                            </>
+                                        )
+                                        : (
+                                            <>
+                                                <span className="block text-2xl mb-2">⏳</span>
+                                                Waiting for Host to start voting...
+                                            </>
+                                        )}
                                 </p>
                             </div>
                         </div>
@@ -612,27 +779,31 @@ export default function RoomPage() {
 
                     {/* Showdown Voting Phase */}
                     {roomState?.status === 'showdown_voting' && (
-                        <div className="flex-1 flex flex-col">
-                            <div className="bg-red-900/30 border-4 border-red-600 p-6 rounded-lg mb-6">
-                                <h2 className="text-2xl font-bold text-red-400 mb-2">
-                                    🗳️ VOTING PHASE
-                                </h2>
-                                <p className="text-gray-300">
-                                    Vote for who you think is the Insider!
+                        <div className="flex-1 flex flex-col animate-fade-in mt-8">
+                            {/* Phase Header */}
+                            <div className="modern-card p-6 mb-6 border-red-500/50 modern-glow-red">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <span className="text-3xl">🗳️</span>
+                                    <h2 className="text-2xl font-bold text-white">Voting Phase</h2>
+                                </div>
+                                <p className="text-gray-400">
+                                    Vote for who you think is the Insider
                                 </p>
                             </div>
 
                             {/* Vote Count Progress */}
-                            <div className="mb-6 bg-gray-900 p-4 rounded border-2 border-gray-700">
-                                <p className="text-gray-400 text-sm mb-2">Votes Submitted</p>
-                                <div className="text-3xl font-bold text-white">
-                                    {roomState.votes?.length || 0} / {roomState.players?.filter((p: any) => p.inGameRole !== 'host').length}
+                            <div className="modern-card p-6 mb-6">
+                                <div className="flex justify-between items-center mb-4">
+                                    <p className="text-gray-400 text-sm font-medium">Votes Submitted</p>
+                                    <p className="text-2xl font-bold text-white">
+                                        {roomState.votes?.length || 0} / {roomState.players?.filter((p: any) => p.inGameRole !== 'host').length}
+                                    </p>
                                 </div>
-                                <div className="w-full bg-gray-700 rounded-full h-4 mt-2">
-                                    <div 
-                                        className="bg-red-600 h-4 rounded-full transition-all"
-                                        style={{ 
-                                            width: `${((roomState.votes?.length || 0) / Math.max(1, roomState.players?.filter((p: any) => p.inGameRole !== 'host').length)) * 100}%` 
+                                <div className="w-full bg-gray-700 rounded-full h-3">
+                                    <div
+                                        className="bg-gradient-to-r from-red-600 to-red-500 h-3 rounded-full transition-all duration-500"
+                                        style={{
+                                            width: `${((roomState.votes?.length || 0) / Math.max(1, roomState.players?.filter((p: any) => p.inGameRole !== 'host').length)) * 100}%`
                                         }}
                                     ></div>
                                 </div>
@@ -641,7 +812,7 @@ export default function RoomPage() {
                             {/* Voting Cards - Commons & Insider Only */}
                             {currentPlayer?.inGameRole !== 'host' && (
                                 <div className="mb-6">
-                                    <h3 className="text-lg font-bold text-gray-300 mb-4">Cast Your Vote</h3>
+                                    <h3 className="text-gray-400 text-sm font-medium mb-4 uppercase tracking-wide">Cast Your Vote</h3>
                                     <div className="grid grid-cols-2 gap-4">
                                         {roomState.players
                                             .filter((p: any) => p.deviceId !== deviceId && p.inGameRole !== 'host')
@@ -663,17 +834,24 @@ export default function RoomPage() {
                                                             }
                                                         }}
                                                         disabled={hasVoted && !votedForMe}
-                                                        className={`p-4 rounded border-4 transition-all ${
+                                                        className={`modern-card p-4 text-left transition-all duration-200 ${
                                                             votedForMe
-                                                                ? 'bg-red-600 border-red-400 text-white font-bold'
+                                                                ? 'bg-red-600/20 border-red-500 ring-2 ring-red-500'
                                                                 : hasVoted
-                                                                ? 'bg-gray-700 border-gray-600 text-gray-500 cursor-not-allowed'
-                                                                : 'bg-gray-800 border-gray-600 hover:bg-red-900/50 hover:border-red-600 text-white'
+                                                                ? 'bg-gray-800/50 border-gray-700 opacity-50 cursor-not-allowed'
+                                                                : 'hover:bg-red-600/10 hover:border-red-500/50'
                                                         }`}
                                                     >
-                                                        <div className="text-lg">{player.name}</div>
-                                                        {votedForMe && <div className="text-sm">✓ Selected</div>}
-                                                        {hasVoted && !votedForMe && <div className="text-sm">Vote Submitted</div>}
+                                                        <div className="font-semibold text-white mb-1">{player.name}</div>
+                                                        {votedForMe && (
+                                                            <div className="flex items-center gap-1 text-red-400 text-sm">
+                                                                <span>✓</span>
+                                                                <span>Selected</span>
+                                                            </div>
+                                                        )}
+                                                        {hasVoted && !votedForMe && (
+                                                            <div className="text-gray-500 text-sm">Vote submitted</div>
+                                                        )}
                                                     </button>
                                                 );
                                             })
@@ -684,8 +862,9 @@ export default function RoomPage() {
 
                             {/* Host View */}
                             {currentPlayer?.inGameRole === 'host' && (
-                                <div className="flex-1 flex items-center justify-center">
-                                    <p className="text-gray-400 text-xl">
+                                <div className="flex-1 modern-card border-dashed border-gray-700 p-8 flex items-center justify-center mb-6">
+                                    <p className="text-gray-400 text-center">
+                                        <span className="block text-3xl mb-2">⏳</span>
                                         Waiting for all players to vote...
                                     </p>
                                 </div>
@@ -693,17 +872,22 @@ export default function RoomPage() {
 
                             {/* Reveal Roles Button - Host Only */}
                             {currentPlayer?.inGameRole === 'host' && (
-                                <div className="mt-6">
+                                <div>
                                     <button
                                         onClick={() => wsRef.current?.send(JSON.stringify({ type: 'reveal_roles' }))}
                                         disabled={roomState.votes?.length < roomState.players?.filter((p: any) => p.inGameRole !== 'host').length}
-                                        className="w-full bg-yellow-600 hover:bg-yellow-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-bold py-4 px-8 rounded border-b-4 border-yellow-800 hover:border-yellow-700 active:border-b-0 active:translate-y-1 transition-all text-xl disabled:border-gray-600"
+                                        className="w-full modern-button bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-white text-lg tracking-wide disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
-                                        🔓 REVEAL ROLES & RESULTS
+                                        <span className="flex items-center justify-center gap-2">
+                                            <span>🔓</span>
+                                            Reveal Roles & Results
+                                        </span>
                                     </button>
-                                    <p className="text-gray-500 text-sm mt-2 text-center">
-                                        All players must vote before revealing
-                                    </p>
+                                    {roomState.votes?.length < roomState.players?.filter((p: any) => p.inGameRole !== 'host').length && (
+                                        <p className="text-gray-500 text-xs mt-2 text-center">
+                                            All players must vote before revealing
+                                        </p>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -711,55 +895,67 @@ export default function RoomPage() {
 
                     {/* Game Completed - Results Screen */}
                     {roomState?.status === 'completed' && roomState.gameResult && (
-                        <div className="flex-1 flex flex-col">
+                        <div className="flex-1 flex flex-col animate-fade-in">
                             {/* Winner Announcement */}
-                            <div className={`p-8 rounded-lg border-4 mb-6 ${
+                            <div className={`modern-card p-8 mb-6 text-center ${
                                 roomState.gameResult.winner === 'commons'
-                                    ? 'bg-green-900/40 border-green-500'
-                                    : 'bg-red-900/40 border-red-500'
+                                    ? 'border-green-500/50 modern-glow-green'
+                                    : 'border-red-500/50 modern-glow-red'
                             }`}>
-                                <h2 className={`text-4xl font-bold mb-4 text-center ${
+                                <div className="text-3xl md:text-4xl mb-2">
+                                    {roomState.gameResult.winner === 'commons' ? '🎉' : '👤'}
+                                </div>
+                                <h2 className={`text-xl md:text-2xl font-bold mb-4 ${
                                     roomState.gameResult.winner === 'commons' ? 'text-green-400' : 'text-red-400'
                                 }`}>
-                                    {roomState.gameResult.winner === 'commons' ? '🎉 COMMONS WIN! 🎉' : '👤 INSIDER WINS! 👤'}
+                                    {roomState.gameResult.winner === 'commons' ? 'COMMONS WIN' : 'INSIDER WINS'}
                                 </h2>
-                                <div className="grid grid-cols-2 gap-4 text-center text-xl">
-                                    <div className="bg-gray-900 p-4 rounded">
-                                        <p className="text-gray-400 text-sm">Word Guessed</p>
-                                        <p className={roomState.gameResult.wordGuessed ? 'text-green-400 font-bold' : 'text-red-400 font-bold'}>
-                                            {roomState.gameResult.wordGuessed ? '✅ YES' : '❌ NO'}
+                                <div className="grid grid-cols-2 gap-3 max-w-sm mx-auto">
+                                    <div className="modern-card p-3">
+                                        <p className="text-gray-400 text-xs mb-1 uppercase">Word</p>
+                                        <p className={`text-sm md:text-base font-bold ${roomState.gameResult.wordGuessed ? 'text-green-400' : 'text-red-400'}`}>
+                                            {roomState.gameResult.wordGuessed ? '✓' : '✗'}
                                         </p>
                                     </div>
-                                    <div className="bg-gray-900 p-4 rounded">
-                                        <p className="text-gray-400 text-sm">Insider Identified</p>
-                                        <p className={roomState.gameResult.insiderIdentified ? 'text-green-400 font-bold' : 'text-red-400 font-bold'}>
-                                            {roomState.gameResult.insiderIdentified ? '✅ YES' : '❌ NO'}
+                                    <div className="modern-card p-3">
+                                        <p className="text-gray-400 text-xs mb-1 uppercase">Insider</p>
+                                        <p className={`text-sm md:text-base font-bold ${roomState.gameResult.insiderIdentified ? 'text-green-400' : 'text-red-400'}`}>
+                                            {roomState.gameResult.insiderIdentified ? '✓' : '✗'}
                                         </p>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Role Reveals */}
+                            {/* Role Reveals - List Layout for Scalability */}
                             <div className="mb-6">
-                                <h3 className="text-2xl font-bold text-gray-300 mb-4">Player Roles</h3>
-                                <div className="grid grid-cols-2 gap-4">
+                                <h3 className="text-base font-bold text-gray-300 mb-3 flex items-center gap-2">
+                                    <span>🎭</span>
+                                    Roles
+                                </h3>
+                                <div className="space-y-2">
                                     {roomState.players.map((player: any) => (
                                         <div
                                             key={player.id}
-                                            className={`p-4 rounded border-4 ${
+                                            className={`modern-card p-3 flex items-center justify-between ${
                                                 player.inGameRole === 'host'
-                                                    ? 'bg-yellow-900/30 border-yellow-600'
+                                                    ? 'border-yellow-500/50 modern-glow'
                                                     : player.inGameRole === 'insider'
-                                                    ? 'bg-red-900/30 border-red-600'
-                                                    : 'bg-blue-900/30 border-blue-600'
+                                                    ? 'border-red-500/50 modern-glow-red'
+                                                    : 'border-blue-500/50'
                                             }`}
                                         >
-                                            <div className="flex items-center gap-2">
-                                                {player.isAdmin && <span>👑</span>}
-                                                <span className="font-bold text-lg">{player.name}</span>
-                                                {player.deviceId === deviceId && <span className="text-blue-400">(You)</span>}
+                                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                {player.isAdmin && <span className="text-base flex-shrink-0">👑</span>}
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className="font-medium text-white text-sm truncate">{player.name}</span>
+                                                        {player.deviceId === deviceId && (
+                                                            <span className="text-xs text-blue-400 bg-blue-900/50 px-2 py-0.5 rounded-full flex-shrink-0">You</span>
+                                                        )}
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div className={`text-xl mt-2 font-bold ${
+                                            <div className={`text-sm md:text-base font-bold flex-shrink-0 ${
                                                 player.inGameRole === 'host' ? 'text-yellow-400' :
                                                 player.inGameRole === 'insider' ? 'text-red-400' : 'text-blue-400'
                                             }`}>
@@ -770,31 +966,39 @@ export default function RoomPage() {
                                 </div>
                             </div>
 
-                            {/* Voting Results */}
+                            {/* Voting Results - Compact List */}
                             {roomState.votes && roomState.votes.length > 0 && (
                                 <div className="mb-6">
-                                    <h3 className="text-2xl font-bold text-gray-300 mb-4">Voting Results</h3>
-                                    <div className="bg-gray-900 p-6 rounded border-2 border-gray-700">
+                                    <h3 className="text-base font-bold text-gray-300 mb-3 flex items-center gap-2">
+                                        <span>📊</span>
+                                        Votes
+                                    </h3>
+                                    <div className="modern-card p-4">
                                         {roomState.players
                                             .filter((p: any) => p.inGameRole !== 'host')
                                             .map((voter: any) => {
                                                 const vote = roomState.votes.find((v: any) => v.voterId === voter.id);
                                                 const target = roomState.players.find((p: any) => p.id === vote?.targetId);
-                                                
+
                                                 return (
-                                                    <div key={voter.id} className="flex items-center justify-between py-3 border-b border-gray-800 last:border-0">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="font-bold">{voter.name}</span>
-                                                            <span className="text-gray-500">voted for</span>
-                                                            <span className={`font-bold ${
+                                                    <div
+                                                        key={voter.id}
+                                                        className="flex items-center justify-between py-2 border-b border-gray-700 last:border-0 last:pb-0"
+                                                    >
+                                                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                            <span className="font-medium text-white text-sm truncate">{voter.name}</span>
+                                                            <span className="text-gray-500 text-xs">→</span>
+                                                            <span className={`font-medium text-sm truncate ${
                                                                 target?.inGameRole === 'insider' ? 'text-green-400' : 'text-red-400'
                                                             }`}>
-                                                                {target?.name || 'Unknown'}
+                                                                {target?.name || '?'}
                                                             </span>
                                                         </div>
                                                         {vote && target && (
-                                                            <span className={target.inGameRole === 'insider' ? 'text-green-400' : 'text-red-400'}>
-                                                                {target.inGameRole === 'insider' ? '✅ Correct' : '❌ Wrong'}
+                                                            <span className={`text-xs font-medium ml-2 flex-shrink-0 ${
+                                                                target.inGameRole === 'insider' ? 'text-green-400' : 'text-red-400'
+                                                            }`}>
+                                                                {target.inGameRole === 'insider' ? '✓' : '✗'}
                                                             </span>
                                                         )}
                                                     </div>
@@ -810,9 +1014,12 @@ export default function RoomPage() {
                                 <div className="mt-6">
                                     <button
                                         onClick={() => wsRef.current?.send(JSON.stringify({ type: 'end_round' }))}
-                                        className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-8 rounded border-b-4 border-blue-800 hover:border-blue-700 active:border-b-0 active:translate-y-1 transition-all text-xl"
+                                        className="w-full modern-button bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white text-lg tracking-wide"
                                     >
-                                        🔄 PLAY AGAIN (Reset to Lobby)
+                                        <span className="flex items-center justify-center gap-2">
+                                            <span>🔄</span>
+                                            Play Again
+                                        </span>
                                     </button>
                                 </div>
                             )}
