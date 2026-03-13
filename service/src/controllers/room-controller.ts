@@ -11,7 +11,7 @@ export const roomRoutes = new Elysia({ prefix: '/rooms' })
             roomId,
             status: 'lobby',
             secretWord: '',
-            timerConfig: { quiz: 180, discussion: 180, votingMode: 'auto' },
+            timerConfig: { quiz: 180, discussion: 180, votingMode: 'manual' }, // Default to manual
             phaseEndTime: null,
             players: []
         });
