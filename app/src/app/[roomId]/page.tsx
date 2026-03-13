@@ -45,6 +45,7 @@ export default function RoomPage() {
     const [selectedLanguage, setSelectedLanguage] = useState<'english' | 'thai'>('english');
     const [isWordVisible, setIsWordVisible] = useState(false);
     const [isRoleHidden, setIsRoleHidden] = useState(true); // Hide role by default for privacy
+    const [copied, setCopied] = useState(false); // Copy feedback state
     const wsRef = useRef<WebSocket | null>(null);
     const remainingTime = useCountdown(roomState?.phaseEndTime);
 
@@ -214,6 +215,28 @@ export default function RoomPage() {
         }
     };
 
+    const handleCopyRoomId = async () => {
+        try {
+            // Get the full URL with room ID (no prefix)
+            const fullUrl = `${window.location.origin}/${roomId}`;
+            await navigator.clipboard.writeText(fullUrl);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
+        } catch (err) {
+            console.error('Failed to copy room ID:', err);
+            // Fallback for older browsers
+            const fullUrl = `${window.location.origin}/${roomId}`;
+            const textArea = document.createElement('textarea');
+            textArea.value = fullUrl;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        }
+    };
+
     if (!deviceId) return (
         <div className="min-h-screen modern-bg flex items-center justify-center font-sans">
             <div className="modern-card p-8 text-center">
@@ -303,10 +326,21 @@ export default function RoomPage() {
                             {formatTime(remainingTime)}
                         </div>
                     )}
-                    <div className="px-4 py-2 rounded-lg border border-gray-700 bg-gray-900/50">
+                    <button
+                        onClick={handleCopyRoomId}
+                        className={`px-4 py-2 rounded-lg border border-gray-700 bg-gray-900/50 cursor-pointer transition-all hover:bg-gray-800/50 active:scale-95 ${
+                            copied ? 'border-green-500/50 bg-green-900/20' : ''
+                        }`}
+                        title="Click to copy room link"
+                    >
                         <span className="text-gray-400 tracking-wider">Room:</span>{' '}
-                        <span className="font-bold text-yellow-400">{roomId}</span>
-                    </div>
+                        <span className={`font-bold ${
+                            copied ? 'text-green-400' : 'text-yellow-400'
+                        }`}>
+                            {copied ? '✓ COPIED!' : roomId}
+                        </span>
+                        <span className="ml-2 text-xs text-gray-500">📋</span>
+                    </button>
                     <button
                         onClick={handleLeaveRoom}
                         className="px-4 py-2 modern-button bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 text-white text-sm tracking-[0.1em] uppercase"
@@ -327,43 +361,45 @@ export default function RoomPage() {
                         {roomState?.players?.map((player: any) => (
                             <li
                                 key={player.id}
-                                className={`flex items-center gap-3 p-3 rounded-lg border ${
+                                className={`flex items-center gap-2 p-2.5 rounded-lg border ${
                                     player.deviceId === deviceId
                                         ? 'bg-blue-900/20 border-blue-500/50'
                                         : 'bg-gray-900/50 border-gray-700'
                                 } ${!player.isOnline ? 'opacity-40 grayscale' : ''}`}
                             >
-                                <div className="flex-1 overflow-hidden">
+                                <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2">
                                         {player.isAdmin && (
-                                            <span title="Admin" className="text-yellow-400">👑</span>
+                                            <span title="Admin" className="text-yellow-400 text-sm">👑</span>
                                         )}
-                                        <span className="font-semibold truncate tracking-wide text-white">{player.name}</span>
+                                        <span className="font-medium truncate tracking-wide text-white text-sm">{player.name}</span>
                                         {player.deviceId === deviceId && (
-                                            <span className="text-xs text-blue-400 bg-blue-900/50 px-2 py-0.5 rounded-full">(You)</span>
+                                            <span className="text-xs text-blue-400 bg-blue-900/50 px-1.5 py-0.5 rounded-full flex-shrink-0">You</span>
                                         )}
                                     </div>
                                     {!player.isOnline && (
-                                        <span className="text-xs text-red-400 block mt-1 tracking-wide">Disconnected</span>
+                                        <span className="text-xs text-red-400 block mt-0.5 tracking-wide">Disconnected</span>
                                     )}
                                 </div>
-                                <div className="flex flex-col gap-2">
+                                <div className="flex gap-1.5 flex-shrink-0">
                                     {isAdmin && roomState?.status === 'lobby' && (
                                         <button
                                             onClick={() => setSelectedHostId(player.id)}
-                                            className={`text-xs px-3 py-1 modern-button ${
+                                            className={`text-xs px-2.5 py-1.5 modern-button flex-shrink-0 ${
                                                 selectedHostId === player.id
                                                     ? 'bg-yellow-500 text-gray-900'
                                                     : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                                             } tracking-wider uppercase`}
+                                            title="Select as Host"
                                         >
-                                            {selectedHostId === player.id ? '✓' : 'Select'}
+                                            {selectedHostId === player.id ? '✓' : 'Host'}
                                         </button>
                                     )}
                                     {isAdmin && player.deviceId !== deviceId && (
                                         <button
                                             onClick={() => wsRef.current?.send(JSON.stringify({ type: 'kick_player', targetPlayerId: player.id }))}
-                                            className="text-red-400 hover:text-red-300 text-xs px-3 py-1.5 modern-button bg-red-900/30 tracking-wider uppercase"
+                                            className="text-red-400 hover:text-red-300 text-xs px-2.5 py-1.5 modern-button bg-red-900/30 tracking-wider uppercase flex-shrink-0"
+                                            title="Kick player"
                                         >
                                             Kick
                                         </button>
@@ -375,16 +411,16 @@ export default function RoomPage() {
                 </div>
                 
                 {/* Game Area */}
-                <div className="col-span-1 lg:col-span-3 modern-card min-h-[600px] flex flex-col p-6 md:p-12">
+                <div className="col-span-1 lg:col-span-3 modern-card min-h-[500px] flex flex-col p-4 md:p-6">
                     {roomState?.status === 'lobby' ? (
                         <div className="flex-1 flex flex-col items-center justify-center text-center">
-                            <h2 className="text-3xl md:text-4xl text-gray-400 mb-8 font-bold tracking-wider">
+                            <h2 className="text-2xl md:text-3xl text-gray-400 mb-4 font-bold tracking-wider">
                                 Waiting in Lobby
                             </h2>
-                            <p className="text-base md:text-lg text-gray-500 mb-12 max-w-lg leading-relaxed">
+                            <p className="text-sm md:text-base text-gray-500 mb-6 max-w-md">
                                 {isAdmin
                                     ? "Select a player to be the Host, configure timers, then start the game."
-                                    : "Ensure everyone has joined. The admin will select the Host and start the game."}
+                                    : "The admin will select a Host and start the game."}
                             </p>
 
                             {isAdmin && (
@@ -812,7 +848,12 @@ export default function RoomPage() {
                             {/* Voting Cards - Commons & Insider Only */}
                             {currentPlayer?.inGameRole !== 'host' && (
                                 <div className="mb-6">
-                                    <h3 className="text-gray-400 text-sm font-medium mb-4 uppercase tracking-wide">Cast Your Vote</h3>
+                                    <h3 className="text-gray-400 text-sm font-medium mb-4 uppercase tracking-wide">
+                                        Cast Your Vote
+                                        {roomState.votes?.some((v: any) => v.voterId === currentPlayer.id) && (
+                                            <span className="text-xs ml-2 text-yellow-400">(Click any player to change vote)</span>
+                                        )}
+                                    </h3>
                                     <div className="grid grid-cols-2 gap-4">
                                         {roomState.players
                                             .filter((p: any) => p.deviceId !== deviceId && p.inGameRole !== 'host')
@@ -826,31 +867,28 @@ export default function RoomPage() {
                                                     <button
                                                         key={player.id}
                                                         onClick={() => {
-                                                            if (!hasVoted || votedForMe) {
-                                                                wsRef.current?.send(JSON.stringify({
-                                                                    type: 'submit_vote',
-                                                                    targetId: player.id
-                                                                }));
-                                                            }
+                                                            // Always allow voting or changing vote
+                                                            wsRef.current?.send(JSON.stringify({
+                                                                type: 'submit_vote',
+                                                                targetId: player.id
+                                                            }));
                                                         }}
-                                                        disabled={hasVoted && !votedForMe}
                                                         className={`modern-card p-4 text-left transition-all duration-200 ${
                                                             votedForMe
                                                                 ? 'bg-red-600/20 border-red-500 ring-2 ring-red-500'
-                                                                : hasVoted
-                                                                ? 'bg-gray-800/50 border-gray-700 opacity-50 cursor-not-allowed'
                                                                 : 'hover:bg-red-600/10 hover:border-red-500/50'
                                                         }`}
                                                     >
                                                         <div className="font-semibold text-white mb-1">{player.name}</div>
-                                                        {votedForMe && (
+                                                        {votedForMe ? (
                                                             <div className="flex items-center gap-1 text-red-400 text-sm">
                                                                 <span>✓</span>
-                                                                <span>Selected</span>
+                                                                <span>{hasVoted ? 'Your Vote' : 'Selected'}</span>
                                                             </div>
-                                                        )}
-                                                        {hasVoted && !votedForMe && (
-                                                            <div className="text-gray-500 text-sm">Vote submitted</div>
+                                                        ) : (
+                                                            <div className="text-gray-500 text-sm">
+                                                                {hasVoted ? 'Click to change' : 'Tap to vote'}
+                                                            </div>
                                                         )}
                                                     </button>
                                                 );

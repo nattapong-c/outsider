@@ -83,21 +83,24 @@ const timerConfigMongooseSchema = new Schema({
 
 const roomMongooseSchema = new Schema<RoomType>({
     roomId: { type: String, required: true, unique: true, index: true },
-    status: { 
-        type: String, 
-        enum: ['lobby', 'playing', 'showdown_discussion', 'showdown_voting', 'completed'], 
-        required: true, 
-        default: 'lobby' 
+    status: {
+        type: String,
+        enum: ['lobby', 'playing', 'showdown_discussion', 'showdown_voting', 'completed'],
+        required: true,
+        default: 'lobby'
     },
     secretWord: { type: String, default: '' },
-    timerConfig: { 
-        type: timerConfigMongooseSchema, 
-        default: () => ({ quiz: 180, discussion: 180, votingMode: 'auto' }) 
+    timerConfig: {
+        type: timerConfigMongooseSchema,
+        default: () => ({ quiz: 180, discussion: 180, votingMode: 'auto' })
     },
     phaseEndTime: { type: Number, default: null },
     players: [playerMongooseSchema],
     votes: [voteMongooseSchema],
     gameResult: { type: gameResultMongooseSchema, default: null }
 }, { timestamps: true });
+
+// TTL Index - Auto-delete rooms after 12 hours (43200 seconds)
+roomMongooseSchema.index({ createdAt: 1 }, { expireAfterSeconds: 43200 });
 
 export const RoomModel = mongoose.model<RoomType>('Room', roomMongooseSchema);

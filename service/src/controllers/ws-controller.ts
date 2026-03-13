@@ -244,7 +244,16 @@ export const wsRoutes = new Elysia({ prefix: '/ws/rooms' })
                                 discussionRoom.votes = [];
                                 await discussionRoom.save();
                                 const votingPayload = JSON.stringify({ type: 'voting_started', room: discussionRoom.toJSON() });
+                                
+                                // Publish to ALL players in the room
                                 ws.publish(`room:${roomId}`, votingPayload);
+                                
+                                // Also send directly to ensure host receives it
+                                if (ws.readyState === 1) {
+                                    ws.send(votingPayload);
+                                }
+                                
+                                logger.info({ roomId }, 'Voting phase started - broadcast to all players');
                             }
                         }, room.timerConfig.discussion * 1000);
                         activeTimers.set(roomId, timers);
